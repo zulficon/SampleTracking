@@ -1,0 +1,46 @@
+# Derleme çıktıları
+[Bb]in/
+[Oo]bj/
+publish/
+
+# Test çıktıları
+TestResults/
+coverage/
+*.trx
+*.coverage
+*.coveragexml
+
+# Kullanıcıya ve ortama özel ayarlar
+.vs/
+.vscode/
+*.user
+*.suo
+
+# Gizli yapılandırma dosyaları
+.env
+.env.*
+secrets.json
+*.pfx
+*.key
+/appsettings.Development.json
+/appsettings.Production.json
+/appsettings.*.local.json
+
+# Yerel önbellekler ve geçici dosyalar
+__pycache__/
+*.py[cod]
+*.tmp
+*.log
+~$*
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Tez üretim araçları ve kişisel çalışma belgeleri
+/tools/
+/NumuneAnalizTakip_*_Raporu.docx
+/BITIRME_PROJESI_RAPORU.md
+/PROJECT_PROGRESS.md
+/CODEX_REFACTOR_GITHUB_PROMPT.md
+/AI-Entegrasyon Rehberi.md
+/AI_ENTEGRASYON_OZET_REHBERI.md

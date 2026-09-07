@@ -1,0 +1,956 @@
+@{
+    ViewData["Title"] = "Numune Yönetimi";
+}
+
+<main class="app-shell">
+    <section id="login-view" class="login-view">
+        <div class="login-panel">
+            <div class="login-brand-wrap">
+                <div class="login-brand">
+                    <span class="brand-symbol">NA</span>
+                    <div>
+                        <strong>Numune Analiz Takip</strong>
+                        <small>Laboratuvar operasyon sistemi</small>
+                    </div>
+                </div>
+                <button id="login-theme-toggle" class="theme-toggle-pill" type="button" aria-label="Temayı değiştir" title="Temayı değiştir">
+                    <span class="theme-sun">☀️</span>
+                    <span class="theme-moon">🌙</span>
+                </button>
+            </div>
+
+            <div class="login-copy">
+                <span class="eyebrow">GÜVENLİ OTURUM</span>
+                <h1>Çalışma alanına giriş yap</h1>
+                <p>Numune süreçlerini, durum geçmişini ve laboratuvar akışını tek yerden yönet.</p>
+            </div>
+
+            <form id="login-form" class="login-form">
+                <label for="username">Kullanıcı adı</label>
+                <input id="username" name="username" autocomplete="username" placeholder="Kullanıcı adın" required />
+
+                <label for="password">Parola</label>
+                <input id="password" name="password" type="password" autocomplete="current-password" placeholder="Parolan" required />
+
+                <button class="button button-primary button-full" type="submit">Giriş yap</button>
+            </form>
+            <p id="login-message" class="form-message" aria-live="polite"></p>
+            <div class="login-register">
+                <span>Henüz hesabın yok mu?</span>
+                <button id="show-register" class="text-button" type="button">Hesap oluştur</button>
+                <small>Yeni hesaplar yönetici onayından sonra kullanılabilir.</small>
+            </div>
+        </div>
+
+        <aside class="login-visual" aria-hidden="true">
+            <div class="visual-orbit orbit-one"></div>
+            <div class="visual-orbit orbit-two"></div>
+            <div class="visual-content">
+                <span>NUMUNE YAŞAM DÖNGÜSÜ</span>
+                <strong>Kayıttan analize kadar<br />her adım görünür.</strong>
+                <div class="visual-flow">
+                    <i></i><i></i><i></i><i></i><i></i><i></i>
+                </div>
+            </div>
+        </aside>
+    </section>
+
+    <section id="dashboard-view" class="dashboard-view" hidden>
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <span class="brand-symbol compact">NA</span>
+                <div>
+                    <strong>Numune Takip</strong>
+                    <small>Operasyon paneli</small>
+                </div>
+                <button id="command-palette-trigger" class="sidebar-search-pill" type="button" aria-label="Hızlı komut paletini aç" title="Hızlı komut paleti (Ctrl + K)">
+                    <span class="search-icon" aria-hidden="true">⌕</span>
+                    <span class="search-placeholder">Hızlı ara veya komut gir...</span>
+                    <kbd class="kbd-badge">Ctrl K</kbd>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav" aria-label="Ana menü">
+                <span class="nav-group-label">GENEL</span>
+                <button id="nav-overview" class="nav-item active" data-view-target="overview-view" type="button">
+                    <span class="nav-icon">⌂</span>
+                    <span><strong>Genel bakış</strong><small>Operasyon özeti</small></span>
+                </button>
+
+                <span class="nav-group-label">OPERASYON</span>
+                <button id="nav-samples" class="nav-item" data-view-target="samples-view" type="button">
+                    <span class="nav-icon">N</span>
+                    <span><strong>Numuneler</strong><small>Kayıtları yönet</small></span>
+                </button>
+                <button id="nav-analysis-catalog" class="nav-item" data-view-target="analysis-catalog-view" type="button">
+                    <span class="nav-icon">A</span>
+                    <span><strong>Analiz kataloğu</strong><small>Kodlar ve parametreler</small></span>
+                </button>
+                <button id="nav-performance" class="nav-item" data-view-target="performance-view" type="button">
+                    <span class="nav-icon">P</span>
+                    <span><strong>Performans analizi</strong><small>İş yükü & verimlilik</small></span>
+                </button>
+
+                <span id="management-nav-label" class="nav-group-label">YÖNETİM</span>
+                <button id="nav-users" class="nav-item" data-view-target="users-view" type="button" hidden>
+                    <span class="nav-icon">K</span>
+                    <span><strong>Kullanıcılar</strong><small>Hesapları yönet</small></span>
+                </button>
+                <button id="nav-knowledge-base" class="nav-item" data-view-target="knowledge-base-view" type="button" hidden>
+                    <span class="nav-icon">R</span>
+                    <span><strong>Bilgi havuzu</strong><small>RAG belgeleri ve arama</small></span>
+                </button>
+
+            </nav>
+
+            <section class="sidebar-session" aria-label="Hesap işlemleri">
+                <div class="sidebar-user-row">
+                    <button id="nav-profile" class="session-profile-compact" data-view-target="profile-view" type="button" title="Profilimi düzenle">
+                        <span class="user-avatar" id="session-avatar">U</span>
+                        <span class="session-profile-copy">
+                            <strong id="session-user"></strong>
+                            <small id="session-role"></small>
+                        </span>
+                    </button>
+                    <button id="theme-toggle-btn" class="sidebar-theme-icon-btn" type="button" aria-label="Temayı değiştir" title="Temayı değiştir">
+                        <span class="theme-sun">☀️</span>
+                        <span class="theme-moon">🌙</span>
+                    </button>
+                </div>
+                <button id="logout-button" class="sidebar-logout-button" type="button">
+                    <span>Çıkış yap</span>
+                    <span aria-hidden="true">↗</span>
+                </button>
+            </section>
+        </aside>
+
+        <section class="workspace">
+            <header class="workspace-header">
+                <div>
+                    <span id="page-eyebrow" class="eyebrow">OPERASYON MERKEZİ</span>
+                    <h1 id="page-title">Genel bakış</h1>
+                    <p id="page-description">Numune akışının güncel durumunu tek ekranda takip et.</p>
+                </div>
+            </header>
+
+            <section id="overview-view" class="app-view">
+                <div class="overview-grid">
+                    <article class="operations-summary">
+                        <div class="summary-heading">
+                            <div>
+                                <span class="eyebrow light">CANLI OPERASYON</span>
+                                <h2>Numune portföyü</h2>
+                            </div>
+                            <span class="live-indicator"><i></i> Güncel</span>
+                        </div>
+
+                        <div class="total-metric">
+                            <strong id="stat-total">0</strong>
+                            <span>toplam numune</span>
+                        </div>
+
+                        <div class="metric-strip">
+                            <div><span>Aktif süreç</span><strong id="stat-active">0</strong></div>
+                            <div><span>Analizde</span><strong id="stat-analyzing">0</strong></div>
+                            <div><span>Tamamlandı</span><strong id="stat-completed">0</strong></div>
+                        </div>
+                    </article>
+
+                    <article class="completion-panel">
+                        <div>
+                            <span class="eyebrow">VERİMLİLİK</span>
+                            <h2>Tamamlanma oranı</h2>
+                            <p>Toplam numunelerin tamamlanan kısmı.</p>
+                        </div>
+                        <div id="completion-ring" class="completion-ring" style="--completion: 0">
+                            <div><strong id="completion-rate">0%</strong><span>tamamlandı</span></div>
+                        </div>
+                    </article>
+                </div>
+
+                <article class="panel workflow-panel">
+                    <div class="panel-header">
+                        <div>
+                            <span class="eyebrow">İŞ AKIŞI</span>
+                            <h2>Numune süreç dağılımı</h2>
+                            <p>Her aşamada bekleyen güncel numune sayısı.</p>
+                        </div>
+                    </div>
+                    <div class="workflow-stages">
+                        <div class="workflow-stage stage-created"><span class="stage-number">01</span><strong id="stage-created">0</strong><b>Kayıt açıldı</b><small>Sisteme eklendi</small></div>
+                        <div class="workflow-stage stage-collected"><span class="stage-number">02</span><strong id="stage-collected">0</strong><b>Toplandı</b><small>Saha işlemi</small></div>
+                        <div class="workflow-stage stage-transferred"><span class="stage-number">03</span><strong id="stage-transferred">0</strong><b>Transferde</b><small>Sevkiyat süreci</small></div>
+                        <div class="workflow-stage stage-received"><span class="stage-number">04</span><strong id="stage-received">0</strong><b>Kabul edildi</b><small>Laboratuvara ulaştı</small></div>
+                        <div class="workflow-stage stage-analyzing"><span class="stage-number">05</span><strong id="stage-analyzing">0</strong><b>Analizde</b><small>Aktif inceleme</small></div>
+                        <div class="workflow-stage stage-completed"><span class="stage-number">06</span><strong id="stage-completed">0</strong><b>Tamamlandı</b><small>Süreç sonucu</small></div>
+                    </div>
+                </article>
+
+                <article class="panel recent-panel">
+                    <div class="panel-header inline">
+                        <div>
+                            <span class="eyebrow">SON HAREKETLER</span>
+                            <h2>Yeni eklenen numuneler</h2>
+                        </div>
+                        <button id="overview-show-all" class="text-button" type="button">Tüm numuneleri gör →</button>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead><tr><th>Numune</th><th>Tür</th><th>Konum</th><th>Durum</th><th>Güncellendi</th><th></th></tr></thead>
+                            <tbody id="recent-sample-table"></tbody>
+                        </table>
+                    </div>
+                </article>
+            </section>
+
+            <section id="samples-view" class="app-view" hidden>
+                <article class="panel samples-panel">
+                    <div class="panel-header inline samples-heading">
+                        <div>
+                            <span class="eyebrow">NUMUNE KAYITLARI</span>
+                            <h2>Tüm numuneler</h2>
+                            <p id="sample-summary">Kayıtlar yükleniyor...</p>
+                        </div>
+                        <div class="panel-actions">
+                            <button id="export-samples-csv" class="button button-secondary" type="button" title="Mevcut listeyi CSV olarak indir">📥 CSV İndir</button>
+                            <button id="refresh-button" class="button button-secondary" type="button">Listeyi yenile</button>
+                            <button id="header-new-sample" class="button button-primary" type="button">+ Yeni numune</button>
+                        </div>
+                    </div>
+
+                    <div class="table-tools">
+                        <label class="search-field">
+                            <span aria-hidden="true">⌕</span>
+                            <input id="sample-search" type="search" placeholder="Kod, tür, konum veya kullanıcı ara" aria-label="Numunelerde ara" />
+                        </label>
+                        <label class="filter-field">
+                            <span>Durum</span>
+                            <select id="status-filter" aria-label="Duruma göre filtrele">
+                                <option value="">Tüm durumlar</option>
+                                <option value="Created">Kayıt açıldı</option>
+                                <option value="Collected">Toplandı</option>
+                                <option value="Transferred">Transferde</option>
+                                <option value="Received">Kabul edildi</option>
+                                <option value="Analyzing">Analizde</option>
+                                <option value="Completed">Tamamlandı</option>
+                            </select>
+                        </label>
+                    </div>
+
+                    <div class="table-wrap">
+                        <table>
+                            <thead><tr><th>Numune</th><th>Tür</th><th>Konum</th><th>Durum</th><th>Oluşturan</th><th>Güncellendi</th><th></th></tr></thead>
+                            <tbody id="sample-table"></tbody>
+                        </table>
+                    </div>
+                    <div class="pagination">
+                        <button id="previous-page" class="button button-secondary" type="button">← Önceki</button>
+                        <span id="page-info">1 / 1</span>
+                        <button id="next-page" class="button button-secondary" type="button">Sonraki →</button>
+                    </div>
+                </article>
+            </section>
+
+            <section id="analysis-catalog-view" class="app-view" hidden>
+                <article class="panel catalog-panel">
+                    <div class="panel-header inline">
+                        <div>
+                            <span class="eyebrow">ANALİZ KATALOĞU</span>
+                            <h2>Analiz kodları ve parametreleri</h2>
+                            <p>Numunelere atanabilen aktif analizleri ayrı bir çalışma alanında incele.</p>
+                        </div>
+                        <button id="refresh-analysis-catalog" class="button button-secondary" type="button">Kataloğu yenile</button>
+                    </div>
+                    <p id="analysis-catalog-message" class="form-message" aria-live="polite"></p>
+                    <div class="catalog-layout">
+                        <div id="analysis-catalog-list" class="catalog-list" aria-label="Analiz kodları"></div>
+                        <section id="analysis-catalog-detail" class="catalog-detail" aria-live="polite">
+                            <div class="catalog-empty">
+                                <strong>Bir analiz kodu seç</strong>
+                                <p>Parametreleri, birimi ve referans aralığını burada göreceksin.</p>
+                            </div>
+                        </section>
+                    </div>
+                </article>
+            </section>
+
+            <section id="knowledge-base-view" class="app-view" hidden>
+                <article class="panel knowledge-base-panel">
+                    <div class="panel-header inline">
+                        <div>
+                            <span class="eyebrow">YÖNETİCİ RAG ALANI</span>
+                            <h2>Bilgi havuzu</h2>
+                            <p>Metin belgelerini vektörle, analiz kodlarına bağla ve RAG aramasının seçtiği kaynakları incele.</p>
+                        </div>
+                        <button id="refresh-knowledge-base" class="button button-secondary" type="button">Listeyi yenile</button>
+                    </div>
+
+                    <p id="knowledge-base-message" class="form-message" aria-live="polite"></p>
+
+                    <div class="knowledge-base-layout">
+                        <section class="knowledge-base-card">
+                            <span class="eyebrow">BELGE EKLE</span>
+                            <h3>Metin tabanlı RAG belgesi</h3>
+                            <form id="knowledge-document-form" class="form-grid">
+                                <label class="wide">Belge başlığı<input name="title" maxlength="200" required /></label>
+                                <label>Kategori
+                                    <select name="category" required>
+                                        <option value="Procedure">Prosedür</option>
+                                        <option value="AnalysisMethod">Analiz yöntemi</option>
+                                        <option value="QualityGuideline">Kalite kılavuzu</option>
+                                    </select>
+                                </label>
+                                <label>Kaynak durumu
+                                    <select id="knowledge-source-status" name="sourceStatus" required>
+                                        <option value="Draft">Draft · demo / taslak</option>
+                                        <option value="Verified">Verified · doğrulanmış</option>
+                                    </select>
+                                </label>
+                                <label class="wide">Kaynak referansı<input id="knowledge-source-reference" name="sourceReference" maxlength="500" placeholder="Örn. LAB-SOP-014 veya kurum prosedür adı" /></label>
+                                <label>Kaynak sürümü<input name="sourceVersion" maxlength="80" placeholder="Örn. Rev. 03" /></label>
+                                <label class="wide">Bağlı analiz kodları
+                                    <span id="knowledge-analysis-code-options" class="knowledge-code-options">Analiz kodları yükleniyor...</span>
+                                </label>
+                                <label class="wide">Belge metni<textarea name="sourceText" minlength="30" maxlength="50000" required placeholder="Belge metnini buraya ekle. Draft içeriklerin resmî prosedür olmadığını açıkça belirt."></textarea></label>
+                                <div class="form-actions wide">
+                                    <button id="submit-knowledge-document" class="button button-primary" type="submit">Belgeyi vektörle ve kaydet</button>
+                                </div>
+                            </form>
+                        </section>
+
+                        <section class="knowledge-base-card">
+                            <span class="eyebrow">RAG TESTİ</span>
+                            <h3>Vektör arama sonucu</h3>
+                            <form id="knowledge-search-form" class="knowledge-search-form">
+                                <label>Arama metni<input name="query" minlength="3" maxlength="500" required placeholder="Örn. atık su KOİ sonucu ve kalite kontrol" /></label>
+                                <button id="submit-knowledge-search" class="button button-secondary" type="submit">RAG ara</button>
+                            </form>
+                            <p class="knowledge-help">Bu alan, AI raporundan önce pgvector’ın seçtiği chunk’ları gösterir.</p>
+                            <div id="knowledge-search-results" class="knowledge-search-results" aria-live="polite">
+                                <p>Bir arama yaparak seçilen kaynak parçalarını inceleyebilirsin.</p>
+                            </div>
+                        </section>
+                    </div>
+
+                    <section class="knowledge-document-list-section">
+                        <div class="section-heading">
+                            <div>
+                                <span class="eyebrow">VEKTÖR KAYITLARI</span>
+                                <h3>Kayıtlı belgeler</h3>
+                            </div>
+                            <span id="knowledge-document-count" class="transition-hint">0 belge</span>
+                        </div>
+                        <div id="knowledge-document-list" class="knowledge-document-list" aria-live="polite"></div>
+                    </section>
+
+                    <dialog id="knowledge-document-dialog" class="knowledge-document-dialog">
+                        <article class="knowledge-document-dialog-card">
+                            <div class="knowledge-document-dialog-header">
+                                <div>
+                                    <span class="eyebrow">BELGE DETAYI</span>
+                                    <h3 id="knowledge-detail-heading">Bilgi havuzu belgesi</h3>
+                                </div>
+                                <button id="close-knowledge-document-dialog" class="dialog-close" type="button" aria-label="Belge detayını kapat">&times;</button>
+                            </div>
+                            <div class="knowledge-detail-summary">
+                                <span id="knowledge-detail-source-status" class="knowledge-status draft">Draft</span>
+                                <small id="knowledge-detail-metadata"></small>
+                            </div>
+                            <p id="knowledge-document-detail-message" class="form-message" aria-live="polite"></p>
+                            <form id="knowledge-document-detail-form" class="form-grid">
+                                <label class="wide">Belge başlığı<input name="title" maxlength="200" required /></label>
+                                <label>Kategori
+                                    <select name="category" required>
+                                        <option value="Procedure">Prosedür</option>
+                                        <option value="AnalysisMethod">Analiz yöntemi</option>
+                                        <option value="QualityGuideline">Kalite kılavuzu</option>
+                                    </select>
+                                </label>
+                                <label>Kaynak sürümü<input name="sourceVersion" maxlength="80" placeholder="Örn. Rev. 03" /></label>
+                                <label class="wide">Kaynak referansı<input name="sourceReference" maxlength="500" /></label>
+                                <label class="wide">Bağlı analiz kodları
+                                    <span id="knowledge-detail-analysis-code-options" class="knowledge-code-options"></span>
+                                </label>
+                                <label class="wide">Belge metni<textarea name="sourceText" minlength="30" maxlength="50000" required></textarea></label>
+                                <p id="knowledge-detail-edit-note" class="knowledge-help wide"></p>
+                                <div class="form-actions wide">
+                                    <button id="cancel-knowledge-document-detail" class="button button-secondary" type="button">Kapat</button>
+                                    <button id="save-knowledge-document" class="button button-primary" type="submit">Kaydet ve yeniden vektörle</button>
+                                </div>
+                            </form>
+                        </article>
+                    </dialog>
+                </article>
+            </section>
+
+            <section id="users-view" class="app-view" hidden>
+                <article class="panel users-panel">
+                    <div class="panel-header inline samples-heading">
+                        <div>
+                            <span class="eyebrow">KULLANICI YÖNETİMİ</span>
+                            <h2>Hesaplar ve yetkiler</h2>
+                            <p id="user-summary">Kullanıcılar yükleniyor...</p>
+                        </div>
+                        <button id="show-create-user" class="button button-primary" type="button">+ Yeni kullanıcı</button>
+                    </div>
+
+                    <div class="table-tools user-table-tools">
+                        <label class="search-field">
+                            <span aria-hidden="true">⌕</span>
+                            <input id="user-search" type="search" placeholder="Ad, kullanıcı adı veya e-posta ara" aria-label="Kullanıcılarda ara" />
+                        </label>
+                        <label class="filter-field">
+                            <span>Rol</span>
+                            <select id="user-role-filter" aria-label="Role göre filtrele">
+                                <option value="">Tüm roller</option>
+                                <option value="Admin">Yönetici</option>
+                                <option value="Laboratory">Laboratuvar çalışanı</option>
+                                <option value="Field">Saha çalışanı</option>
+                                <option value="Manager">Birim yöneticisi</option>
+                            </select>
+                        </label>
+                        <label class="filter-field">
+                            <span>Durum</span>
+                            <select id="user-active-filter" aria-label="Aktifliğe göre filtrele">
+                                <option value="">Tümü</option>
+                                <option value="true">Aktif</option>
+                                <option value="false">Onay bekliyor / pasif</option>
+                            </select>
+                        </label>
+                    </div>
+
+                    <div class="table-wrap">
+                        <table>
+                            <thead><tr><th>Kullanıcı</th><th>E-posta</th><th>Rol</th><th>Durum</th><th>Oluşturuldu</th><th></th></tr></thead>
+                            <tbody id="user-table"></tbody>
+                        </table>
+                    </div>
+                    <div class="pagination">
+                        <button id="user-previous-page" class="button button-secondary" type="button">← Önceki</button>
+                        <span id="user-page-info">1 / 1</span>
+                        <button id="user-next-page" class="button button-secondary" type="button">Sonraki →</button>
+                    </div>
+                </article>
+            </section>
+
+            <section id="sample-detail-view" class="app-view sample-detail-view" hidden>
+                <article class="sample-detail-shell">
+                    <header class="workspace-detail-header">
+                        <div>
+                            <span class="eyebrow">NUMUNE DETAYI</span>
+                            <h2 id="sample-detail-title">Numune bilgileri</h2>
+                            <p id="detail-code"></p>
+                        </div>
+                        <button id="back-to-samples-button" class="button button-secondary" type="button">← Numunelere dön</button>
+                    </header>
+
+                    <nav class="detail-tabs" aria-label="Numune detay bölümleri">
+                        <button class="detail-tab active" type="button" data-sample-tab="sample-tab-overview" aria-selected="true">Bilgiler ve işlem</button>
+                        <button class="detail-tab" type="button" data-sample-tab="sample-tab-analyses" aria-selected="false">Analizler</button>
+                        <button class="detail-tab" type="button" data-sample-tab="sample-tab-history" aria-selected="false">Geçmiş</button>
+                    </nav>
+
+                    <div id="sample-tab-overview" class="detail-layout detail-tab-panel">
+                        <section>
+                            <dl class="detail-grid">
+                                <div><dt>Numune türü</dt><dd id="detail-sample-type"></dd></div>
+                                <div><dt>Güncel durum</dt><dd id="detail-status"></dd></div>
+                                <div><dt>Konum</dt><dd id="detail-location"></dd></div>
+                                <div><dt>Oluşturan</dt><dd id="detail-created-by"></dd></div>
+                                <div><dt>Sorumlu laboratuvar çalışanı</dt><dd id="detail-laboratory-worker"></dd></div>
+                                <div><dt>Oluşturulma</dt><dd id="detail-created-at"></dd></div>
+                                <div><dt>Son güncelleme</dt><dd id="detail-updated-at"></dd></div>
+                                <div class="wide"><dt>Açıklama</dt><dd id="detail-description"></dd></div>
+                            </dl>
+
+                            <div class="sample-action-grid" aria-label="Numune işlemleri">
+                                <article id="sample-edit-card" class="sample-action-card">
+                                    <span class="eyebrow">KAYIT BİLGİLERİ</span>
+                                    <h3>Numune bilgilerini düzenle</h3>
+                                    <p>Tür, konum ve açıklama alanlarını güncelle.</p>
+                                    <button id="show-sample-edit" class="button button-secondary" type="button">Bilgileri düzenle</button>
+                                </article>
+
+                                <article id="laboratory-worker-assignment-card" class="sample-action-card" hidden>
+                                    <span class="eyebrow">GÖREVLENDİRME</span>
+                                    <h3>Laboratuvar çalışanı ata</h3>
+                                    <p>Numunenin sorumlu laboratuvar çalışanını belirle.</p>
+                                    <button id="show-laboratory-worker-assignment" class="button button-secondary" type="button">Atamayı yönet</button>
+                                </article>
+
+                                <article class="sample-action-card">
+                                    <span class="eyebrow">SÜREÇ İŞLEMİ</span>
+                                    <h3>Numune durumunu ilerlet</h3>
+                                    <p>Bir sonraki iş akışı adımına geçiş yap.</p>
+                                    <button id="show-status-change" class="button button-primary" type="button">Durumu güncelle</button>
+                                </article>
+                            </div>
+
+                            <form id="sample-edit-form" class="status-form" hidden>
+                                <div class="status-form-heading">
+                                    <div><span class="eyebrow">KAYIT BİLGİLERİ</span><h3>Numune bilgisini düzenle</h3></div>
+                                </div>
+                                <label>Numune türü<select id="edit-sample-type" name="sampleType" required><option value="">Tür seç</option><option>Kaya</option><option>Toprak</option><option>Cevher</option></select></label>
+                                <label>Konum<select id="edit-location-id" name="locationId" disabled><option value="">Konumlar yükleniyor...</option></select></label>
+                                <label>Açıklama<textarea id="edit-description" name="description" placeholder="Numuneyle ilgili kısa bir açıklama yaz."></textarea></label>
+                                <p id="sample-edit-message" class="form-message" aria-live="polite"></p>
+                                <div class="form-actions">
+                                    <button id="cancel-sample-edit" class="button button-secondary" type="button">Vazgeç</button>
+                                    <button class="button button-primary" type="submit">Değişiklikleri kaydet</button>
+                                </div>
+                            </form>
+
+                            <form id="laboratory-worker-assignment-form" class="status-form" hidden>
+                                <div class="status-form-heading">
+                                    <div><span class="eyebrow">GÖREVLENDİRME</span><h3>Sorumlu laboratuvar çalışanı</h3></div>
+                                </div>
+                                <label>Laboratuvar çalışanı<select id="laboratory-worker-id" name="laboratoryWorkerId" disabled><option value="">Çalışanlar yükleniyor...</option></select></label>
+                                <p id="laboratory-worker-message" class="form-message" aria-live="polite"></p>
+                                <div class="form-actions">
+                                    <button id="cancel-laboratory-worker-assignment" class="button button-secondary" type="button">Vazgeç</button>
+                                    <button class="button button-primary" type="submit">Atamayı kaydet</button>
+                                </div>
+                            </form>
+
+                            <form id="status-change-form" class="status-form" hidden>
+                                <div class="status-form-heading">
+                                    <div><span class="eyebrow">SONRAKİ ADIM</span><h3>Numune durumunu ilerlet</h3></div>
+                                    <span id="status-transition-hint" class="transition-hint"></span>
+                                </div>
+                                <label>Yeni durum<select id="new-status-select" name="newStatus" required></select></label>
+                                <label>İşlem notu<input name="note" maxlength="500" placeholder="Yapılan işlemle ilgili kısa not" /></label>
+                                <p id="status-change-message" class="form-message" aria-live="polite"></p>
+                                <div class="form-actions">
+                                    <button id="cancel-status-change" class="button button-secondary" type="button">Vazgeç</button>
+                                    <button id="status-submit-button" class="button button-primary" type="submit">Durumu güncelle</button>
+                                </div>
+                            </form>
+                        </section>
+                    </div>
+
+                    <section id="sample-tab-analyses" class="sample-analysis-section detail-tab-panel" hidden>
+                        <div class="analysis-section-heading">
+                            <div>
+                                <span class="eyebrow">ANALİZ YÖNETİMİ</span>
+                                <h3>Numuneye atanan analizler</h3>
+                                <p>İstenen analizleri, ölçüm sonuçlarını ve süreç durumlarını buradan takip et.</p>
+                            </div>
+                            <button id="show-analysis-assignment" class="button button-secondary" type="button">+ Analiz ekle</button>
+                        </div>
+
+                        <form id="analysis-assignment-form" class="analysis-assignment-form" hidden>
+                            <div id="analysis-code-options" class="analysis-code-options"></div>
+                            <p id="analysis-assignment-message" class="form-message" aria-live="polite"></p>
+                            <div class="form-actions">
+                                <button id="cancel-analysis-assignment" class="button button-secondary" type="button">Vazgeç</button>
+                                <button class="button button-primary" type="submit">Seçilen analizleri ata</button>
+                            </div>
+                        </form>
+
+                        <p id="sample-analysis-message" class="form-message" aria-live="polite"></p>
+                        <div id="sample-analysis-list" class="sample-analysis-list"></div>
+
+                        <section id="ai-sample-report-section" class="ai-sample-report-section">
+                            <div class="ai-insight-heading">
+                                <div>
+                                    <span class="eyebrow">YEREL AI DESTEĞİ</span>
+                                    <h3>Numune inceleme raporu</h3>
+                                    <p>Qwen3, numunenin bütün analizlerini ve kayıtlı sonuçlarını tek raporda özetler; teknik karar veya durum değişikliği yapmaz.</p>
+                                </div>
+                                <button id="generate-ai-sample-report" class="button button-secondary" type="button">AI raporu hazırla</button>
+                            </div>
+                            <p id="ai-sample-report-message" class="form-message" aria-live="polite"></p>
+                            <div id="ai-sample-report-content" class="ai-insight-content" hidden></div>
+                        </section>
+                    </section>
+
+                    <section id="sample-tab-history" class="history-section detail-tab-panel" hidden>
+                        <div class="history-heading"><span class="eyebrow">İŞLEM GEÇMİŞİ</span><h3>Durum hareketleri</h3></div>
+                        <div id="history-table" class="history-list"></div>
+                    </section>
+                </article>
+            </section>
+
+            <section id="analysis-detail-view" class="app-view analysis-detail-view" hidden>
+                <article class="analysis-detail-shell">
+                    <header class="workspace-detail-header">
+                        <div>
+                            <span class="eyebrow">ANALİZ DETAYI</span>
+                            <h2 id="analysis-detail-title">Analiz bilgileri</h2>
+                            <p id="analysis-detail-code"></p>
+                        </div>
+                        <button id="back-to-sample-detail-button" class="button button-secondary" type="button">← Numune detayına dön</button>
+                    </header>
+
+                    <div class="analysis-detail-content">
+                        <dl class="detail-grid analysis-meta-grid">
+                            <div><dt>Durum</dt><dd id="analysis-detail-status"></dd></div>
+                            <div><dt>İsteyen</dt><dd id="analysis-detail-requested-by"></dd></div>
+                            <div><dt>İstek tarihi</dt><dd id="analysis-detail-requested-at"></dd></div>
+                            <div><dt>Başlatan</dt><dd id="analysis-detail-started-by"></dd></div>
+                            <div><dt>Başlangıç</dt><dd id="analysis-detail-started-at"></dd></div>
+                            <div><dt>Tamamlayan</dt><dd id="analysis-detail-completed-by"></dd></div>
+                            <div><dt>Tamamlanma</dt><dd id="analysis-detail-completed-at"></dd></div>
+                            <div class="wide"><dt>Sonuç notu</dt><dd id="analysis-detail-result-note"></dd></div>
+                        </dl>
+
+                        <form id="analysis-results-form" class="analysis-results-form">
+                            <div class="analysis-form-heading">
+                                <div><span class="eyebrow">ÖLÇÜM SONUÇLARI</span><h3>Parametre değerleri</h3></div>
+                                <span id="analysis-result-hint" class="transition-hint"></span>
+                            </div>
+                            <div id="analysis-result-fields" class="analysis-result-fields"></div>
+                            <p id="analysis-result-message" class="form-message" aria-live="polite"></p>
+                            <button id="save-analysis-results" class="button button-primary" type="submit">Sonuçları kaydet</button>
+                        </form>
+
+                        <section class="analysis-history-section">
+                            <div class="history-heading"><span class="eyebrow">ANALİZ GEÇMİŞİ</span><h3>Durum hareketleri</h3></div>
+                            <div id="analysis-history-list" class="history-list"></div>
+                        </section>
+
+                        <p id="analysis-action-message" class="form-message" aria-live="polite"></p>
+                        <label class="analysis-note-field">İşlem / sonuç notu<textarea id="analysis-action-note" maxlength="1000" placeholder="Tamamlama notu isteğe bağlıdır; iptal için açıklama zorunludur."></textarea></label>
+                        <div class="analysis-actions">
+                            <button id="cancel-analysis" class="button button-danger" type="button">Analizi iptal et</button>
+                            <button id="start-analysis" class="button button-secondary" type="button">Analizi başlat</button>
+                            <button id="complete-analysis" class="button button-primary" type="button">Analizi tamamla</button>
+                        </div>
+                    </div>
+                </article>
+            </section>
+
+            <section id="performance-view" class="app-view" hidden>
+                <div class="performance-toolbar">
+                    <div class="performance-filters">
+                        <span class="filter-label">Dönem:</span>
+                        <div class="period-buttons" role="radiogroup" aria-label="Dönem seçimi">
+                            <button class="period-button active" data-period="all" type="button">Tümü</button>
+                            <button class="period-button" data-period="today" type="button">Bugün</button>
+                            <button class="period-button" data-period="last7days" type="button">Son 7 Gün</button>
+                            <button class="period-button" data-period="last30days" type="button">Son 30 Gün</button>
+                            <button class="period-button" data-period="thisMonth" type="button">Bu Ay</button>
+                        </div>
+                        <div class="role-filter-wrap">
+                            <select id="performance-role-filter" class="table-select" aria-label="Rol filtresi">
+                                <option value="">Tüm Roller</option>
+                                <option value="Laboratory">Laboratuvar</option>
+                                <option value="Field">Saha</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="panel-actions">
+                        <button id="export-performance-csv" class="button button-secondary compact-btn" type="button" title="Performans verilerini CSV olarak indir">📥 CSV İndir</button>
+                        <button id="refresh-performance-button" class="button button-secondary compact-btn" type="button">Yenile ↻</button>
+                    </div>
+                </div>
+
+                <p id="performance-message" class="form-message" aria-live="polite"></p>
+
+                <!-- KPI Cards Grid -->
+                <div class="performance-kpi-grid">
+                    <article class="perf-kpi-card">
+                        <div class="perf-kpi-header">
+                            <span class="perf-kpi-icon">✓</span>
+                            <span class="eyebrow">TAMAMLANAN</span>
+                        </div>
+                        <strong id="perf-kpi-completed" class="perf-kpi-value">0</strong>
+                        <span class="perf-kpi-sub">tamamlanan analiz</span>
+                    </article>
+
+                    <article class="perf-kpi-card">
+                        <div class="perf-kpi-header">
+                            <span class="perf-kpi-icon">⏱</span>
+                            <span class="eyebrow">AKTİF İŞ YÜKÜ</span>
+                        </div>
+                        <strong id="perf-kpi-active" class="perf-kpi-value">0</strong>
+                        <span class="perf-kpi-sub">devam eden & bekleyen</span>
+                    </article>
+
+                    <article class="perf-kpi-card">
+                        <div class="perf-kpi-header">
+                            <span class="perf-kpi-icon">⚡</span>
+                            <span class="eyebrow">ORTALAMA SÜRE</span>
+                        </div>
+                        <strong id="perf-kpi-avg-duration" class="perf-kpi-value">—</strong>
+                        <span class="perf-kpi-sub">analiz başı tamamlama</span>
+                    </article>
+
+                    <article class="perf-kpi-card highlight">
+                        <div class="perf-kpi-header">
+                            <span class="perf-kpi-icon">🏆</span>
+                            <span class="eyebrow">EN AKTİF ANALİST</span>
+                        </div>
+                        <strong id="perf-kpi-top-performer" class="perf-kpi-value">—</strong>
+                        <span id="perf-kpi-top-sub" class="perf-kpi-sub">0 analiz tamamladı</span>
+                    </article>
+                </div>
+
+                <!-- AI Workload & Efficiency Insight Panel -->
+                <article class="panel ai-workload-panel">
+                    <div class="panel-header inline">
+                        <div>
+                            <span class="eyebrow">YEREL AI · QWEN3 4B</span>
+                            <h2>Ekip İş Yükü ve Verimlilik Değerlendirmesi</h2>
+                            <p>İş dağılımı, potansiyel darboğazlar ve süreç iyileştirme önerileri.</p>
+                        </div>
+                        <button id="generate-workload-insight" class="button button-primary compact-btn" type="button">
+                            <span>AI ile İş Yükünü İncele</span>
+                        </button>
+                    </div>
+                    <p id="ai-workload-message" class="form-message" aria-live="polite"></p>
+                    <div id="ai-workload-content" class="ai-workload-content" hidden></div>
+                </article>
+
+                <!-- Worker Performance Table -->
+                <article class="panel">
+                    <div class="panel-header inline">
+                        <div>
+                            <span class="eyebrow">PERSONEL İSTATİSTİKLERİ</span>
+                            <h2>Çalışan Bazlı Performans Tablosu</h2>
+                            <p>Analiz tamamlama sayıları, aktif iş yükü ve ortalama süreler.</p>
+                        </div>
+                        <div class="search-input-wrap">
+                            <input id="worker-search-input" type="search" placeholder="Çalışan ara..." class="table-search" />
+                        </div>
+                    </div>
+                    <div class="table-wrap">
+                        <table class="performance-table">
+                            <thead>
+                                <tr>
+                                    <th>Çalışan</th>
+                                    <th>Rol</th>
+                                    <th>Atanan Numune</th>
+                                    <th>Tamamlanan</th>
+                                    <th>Devam Eden</th>
+                                    <th>Bekleyen</th>
+                                    <th>Ölçüm Sayısı</th>
+                                    <th>Ort. Süre</th>
+                                    <th>Tamamlama Oranı</th>
+                                </tr>
+                            </thead>
+                            <tbody id="worker-performance-table-body">
+                                <tr><td colspan="9" class="history-empty">Yükleniyor...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </article>
+
+                <!-- Analysis Type Breakdown -->
+                <article class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <span class="eyebrow">ANALİZ TÜRÜ İSTATİSTİKLERİ</span>
+                            <h2>Paket Bazında Talep ve Tamamlanma Dağılımı</h2>
+                            <p>Laboratuvarda en çok talep edilen ve yürütülen analiz paketleri.</p>
+                        </div>
+                    </div>
+                    <div class="table-wrap">
+                        <table class="performance-table">
+                            <thead>
+                                <tr>
+                                    <th>Analiz Kodu & Adı</th>
+                                    <th>Toplam Talep</th>
+                                    <th>Tamamlanan</th>
+                                    <th>Devam Eden</th>
+                                    <th>İptal</th>
+                                    <th>Ort. Süre</th>
+                                </tr>
+                            </thead>
+                            <tbody id="analysis-type-performance-body">
+                                <tr><td colspan="6" class="history-empty">Yükleniyor...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </article>
+            </section>
+
+            <section id="profile-view" class="app-view" hidden>
+                <div class="profile-layout">
+                    <article class="panel profile-card">
+                        <div class="profile-identity">
+                            <span id="profile-avatar" class="profile-avatar">U</span>
+                            <div>
+                                <span class="eyebrow">HESAP BİLGİLERİ</span>
+                                <h2 id="profile-display-name">Profilim</h2>
+                                <p id="profile-username"></p>
+                            </div>
+                        </div>
+                        <dl class="profile-meta">
+                            <div><dt>Rol</dt><dd id="profile-role">—</dd></div>
+                            <div><dt>Hesap durumu</dt><dd id="profile-state">—</dd></div>
+                        </dl>
+                    </article>
+
+                    <div class="profile-form-stack">
+                        <article class="panel profile-form-panel">
+                            <div class="panel-header">
+                                <span class="eyebrow">PROFİLİ DÜZENLE</span>
+                                <h2>Kişisel bilgiler</h2>
+                                <p>Kullanıcı adı ve rol yalnızca yönetici tarafından değiştirilebilir.</p>
+                            </div>
+                            <form id="profile-form" class="form-grid compact-form">
+                                <label class="wide">Ad soyad<input id="profile-full-name" name="fullName" maxlength="150" required /></label>
+                                <label class="wide">E-posta<input id="profile-email" name="email" type="email" maxlength="254" autocomplete="email" required /></label>
+                                <p id="profile-message" class="form-message wide" aria-live="polite"></p>
+                                <div class="form-actions wide">
+                                    <button class="button button-primary" type="submit">Profili kaydet</button>
+                                </div>
+                            </form>
+                        </article>
+
+                        <article class="panel profile-form-panel">
+                            <div class="panel-header">
+                                <span class="eyebrow">HESAP GÜVENLİĞİ</span>
+                                <h2>Parola değiştir</h2>
+                                <p>Yeni parolan en az 8 karakter olmalı ve mevcut parolandan farklı olmalıdır.</p>
+                            </div>
+                            <form id="change-password-form" class="form-grid compact-form">
+                                <label class="wide">Mevcut parola<input name="currentPassword" type="password" maxlength="100" autocomplete="current-password" required /></label>
+                                <label>Yeni parola<input name="newPassword" type="password" minlength="8" maxlength="100" autocomplete="new-password" required /></label>
+                                <label>Yeni parola tekrarı<input name="confirmNewPassword" type="password" minlength="8" maxlength="100" autocomplete="new-password" required /></label>
+                                <p id="change-password-message" class="form-message wide" aria-live="polite"></p>
+                                <div class="form-actions wide">
+                                    <button class="button button-primary" type="submit">Parolayı değiştir</button>
+                                </div>
+                            </form>
+                        </article>
+                    </div>
+                </div>
+            </section>
+        </section>
+    </section>
+
+    <section id="register-view" class="modal-layer" role="dialog" aria-modal="true" aria-labelledby="register-title" hidden>
+        <button class="modal-backdrop" data-close-modal="register-view" type="button" aria-label="Kayıt penceresini kapat"></button>
+        <article class="modal-panel">
+            <header class="modal-header">
+                <div>
+                    <span class="eyebrow">YENİ HESAP</span>
+                    <h2 id="register-title">Hesap oluştur</h2>
+                    <p>Başvurun saha çalışanı olarak oluşturulur ve yönetici onayı bekler.</p>
+                </div>
+                <button class="icon-button modal-close" data-close-modal="register-view" type="button" aria-label="Kapat">×</button>
+            </header>
+            <form id="register-form" class="form-grid">
+                <label>Kullanıcı adı<input name="username" minlength="3" maxlength="50" pattern="[a-zA-Z0-9._-]+" autocomplete="username" autofocus required /></label>
+                <label>Ad soyad<input name="fullName" minlength="2" maxlength="150" autocomplete="name" required /></label>
+                <label class="wide">E-posta<input name="email" type="email" maxlength="254" autocomplete="email" required /></label>
+                <label>Parola<input name="password" type="password" minlength="8" maxlength="100" autocomplete="new-password" required /></label>
+                <label>Parola tekrarı<input name="confirmPassword" type="password" minlength="8" maxlength="100" autocomplete="new-password" required /></label>
+                <p id="register-message" class="form-message wide" aria-live="polite"></p>
+                <div class="form-actions wide">
+                    <button class="button button-secondary" data-close-modal="register-view" type="button">Vazgeç</button>
+                    <button class="button button-primary" type="submit">Başvuruyu gönder</button>
+                </div>
+            </form>
+        </article>
+    </section>
+
+    <section id="create-user-view" class="modal-layer" role="dialog" aria-modal="true" aria-labelledby="create-user-title" hidden>
+        <button class="modal-backdrop" data-close-modal="create-user-view" type="button" aria-label="Yeni kullanıcı penceresini kapat"></button>
+        <article class="modal-panel">
+            <header class="modal-header">
+                <div>
+                    <span class="eyebrow">YÖNETİCİ İŞLEMİ</span>
+                    <h2 id="create-user-title">Yeni kullanıcı oluştur</h2>
+                    <p>Hesap aktif oluşturulur; geçici parola kullanıcıya güvenli biçimde iletilmelidir.</p>
+                </div>
+                <button class="icon-button modal-close" data-close-modal="create-user-view" type="button" aria-label="Kapat">×</button>
+            </header>
+            <form id="create-user-form" class="form-grid">
+                <label>Kullanıcı adı<input name="username" minlength="3" maxlength="50" pattern="[a-zA-Z0-9._-]+" autocomplete="off" autofocus required /></label>
+                <label>Ad soyad<input name="fullName" minlength="2" maxlength="150" required /></label>
+                <label class="wide">E-posta<input name="email" type="email" maxlength="254" required /></label>
+                <label>Rol<select name="role" required><option value="Field">Saha çalışanı</option><option value="Laboratory">Laboratuvar çalışanı</option><option value="Manager">Birim yöneticisi</option><option value="Admin">Yönetici</option></select></label>
+                <label>Geçici parola<input name="temporaryPassword" type="password" minlength="8" maxlength="100" autocomplete="new-password" required /></label>
+                <p id="create-user-message" class="form-message wide" aria-live="polite"></p>
+                <div class="form-actions wide">
+                    <button class="button button-secondary" data-close-modal="create-user-view" type="button">Vazgeç</button>
+                    <button class="button button-primary" type="submit">Kullanıcıyı oluştur</button>
+                </div>
+            </form>
+        </article>
+    </section>
+
+    <section id="user-detail-view" class="modal-layer" role="dialog" aria-modal="true" aria-labelledby="user-detail-title" hidden>
+        <button class="modal-backdrop" data-close-modal="user-detail-view" type="button" aria-label="Kullanıcı detayını kapat"></button>
+        <article class="modal-panel modal-user">
+            <header class="modal-header">
+                <div>
+                    <span class="eyebrow">KULLANICI DETAYI</span>
+                    <h2 id="user-detail-title">Kullanıcı bilgileri</h2>
+                    <p id="user-detail-username"></p>
+                </div>
+                <button class="icon-button modal-close" data-close-modal="user-detail-view" type="button" aria-label="Kapat">×</button>
+            </header>
+            <div class="user-detail-content">
+                <div class="user-stat-grid">
+                    <div><span>Oluşturduğu numune</span><strong id="user-created-sample-count">0</strong></div>
+                    <div><span>Atanan numune</span><strong id="user-assigned-sample-count">0</strong></div>
+                    <div><span>Hesap durumu</span><strong id="user-detail-state">—</strong></div>
+                </div>
+                <form id="user-edit-form" class="form-grid compact-form">
+                    <label class="wide">Ad soyad<input id="user-edit-full-name" name="fullName" maxlength="150" required /></label>
+                    <label class="wide">E-posta<input id="user-edit-email" name="email" type="email" maxlength="254" required /></label>
+                    <label class="wide">Rol<select id="user-edit-role" name="role" required><option value="Admin">Yönetici</option><option value="Laboratory">Laboratuvar çalışanı</option><option value="Field">Saha çalışanı</option><option value="Manager">Birim yöneticisi</option></select></label>
+                    <p id="user-edit-message" class="form-message wide" aria-live="polite"></p>
+                    <div class="user-detail-actions wide">
+                        <button id="toggle-user-active" class="button button-secondary" type="button">Hesabı pasifleştir</button>
+                        <button class="button button-primary" type="submit">Değişiklikleri kaydet</button>
+                    </div>
+                </form>
+            </div>
+        </article>
+    </section>
+
+    <section id="new-sample-view" class="modal-layer" role="dialog" aria-modal="true" aria-labelledby="new-sample-title" hidden>
+        <button class="modal-backdrop" data-close-modal="new-sample-view" type="button" aria-label="Yeni numune penceresini kapat"></button>
+        <article class="modal-panel">
+            <header class="modal-header">
+                <div>
+                    <span class="eyebrow">YENİ KAYIT</span>
+                    <h2 id="new-sample-title">Yeni numune oluştur</h2>
+                    <p>Kayıt, iş akışına <strong>Kayıt açıldı</strong> aşamasında dahil edilir.</p>
+                </div>
+                <button id="close-new-sample-button" class="icon-button modal-close" type="button" aria-label="Kapat">×</button>
+            </header>
+
+            <form id="new-sample-form" class="form-grid">
+                <label>Numune kodu<input name="sampleCode" placeholder="Örn. NUM-2026-033" maxlength="50" autofocus required /></label>
+                <label>Numune türü<select name="sampleType" required><option value="">Tür seç</option><option>Kaya</option><option>Toprak</option><option>Cevher</option></select></label>
+                <label class="wide">Konum<select id="location-id" name="locationId"><option value="">Konum seçilmedi</option></select></label>
+                <label class="wide">Açıklama<textarea name="description" placeholder="Numuneyle ilgili kısa bir açıklama yaz."></textarea></label>
+                <p id="new-sample-message" class="form-message wide" aria-live="polite"></p>
+                <div class="form-actions wide">
+                    <button id="cancel-new-sample" class="button button-secondary" type="button">Vazgeç</button>
+                    <button class="button button-primary" type="submit">Numuneyi kaydet</button>
+                </div>
+            </form>
+        </article>
+    </section>
+
+
+
+    <!-- Global Command Palette (Ctrl + K) -->
+    <section id="command-palette" class="modal-layer command-palette-layer" role="dialog" aria-modal="true" aria-label="Komut Paleti" hidden>
+        <button id="command-palette-backdrop" class="modal-backdrop" type="button" aria-label="Komut paletini kapat"></button>
+        <article class="command-palette-card">
+            <div class="command-palette-header">
+                <span class="command-search-icon" aria-hidden="true">🔍</span>
+                <input id="command-palette-input" class="command-palette-input" type="text" placeholder="Numune ara, sayfaya git veya işlem yap..." autocomplete="off" spellcheck="false" />
+                <kbd class="command-palette-esc">ESC</kbd>
+            </div>
+            <div id="command-palette-results" class="command-palette-results">
+                <!-- Dynamically populated categories & actions -->
+            </div>
+            <div class="command-palette-footer">
+                <span class="palette-hint"><kbd>↑</kbd><kbd>↓</kbd> Gezin</span>
+                <span class="palette-hint"><kbd>↵</kbd> Seç</span>
+                <span class="palette-hint"><kbd>ESC</kbd> Kapat</span>
+            </div>
+        </article>
+    </section>
+
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+</main>

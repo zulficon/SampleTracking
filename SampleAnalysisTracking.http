@@ -1,0 +1,107 @@
+@host = http://localhost:5011
+@sampleId = 1
+@analysisCodeId = 1
+@parameterId = 1
+@sampleAnalysisId = 1
+
+### Oturum aç; HTTP istemcisi response cookie'sini sonraki isteklere taşır
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "DEVELOPMENT_SEED_PAROLANIZ"
+}
+
+### Aktif analiz kataloğu
+GET {{host}}/api/analysis-codes
+Accept: application/json
+
+### Analiz kodu ve parametre detayı
+GET {{host}}/api/analysis-codes/{{analysisCodeId}}
+Accept: application/json
+
+### Admin: analiz kodu oluştur
+POST {{host}}/api/analysis-codes
+Content-Type: application/json
+
+{
+  "code": "SULFATE",
+  "name": "Sülfat Analizi",
+  "description": "Sülfat miktarının sayısal ölçümü"
+}
+
+### Admin: analiz koduna parametre ekle
+POST {{host}}/api/analysis-codes/{{analysisCodeId}}/parameters
+Content-Type: application/json
+
+{
+  "code": "SO4",
+  "name": "Sülfat",
+  "defaultUnit": "mg/L",
+  "referenceMin": 0,
+  "referenceMax": 250,
+  "isRequired": true,
+  "displayOrder": 1
+}
+
+### Numuneye atanmış analizler
+GET {{host}}/api/samples/{{sampleId}}/analyses
+Accept: application/json
+
+### Numuneye analiz kodları ata
+POST {{host}}/api/samples/{{sampleId}}/analyses
+Content-Type: application/json
+
+{
+  "analysisCodeIds": [1, 2]
+}
+
+### Analiz detayı, parametre sonuçları ve geçmiş
+GET {{host}}/api/sample-analyses/{{sampleAnalysisId}}
+Accept: application/json
+
+### Analizi başlat; numune Received olmalı
+POST {{host}}/api/sample-analyses/{{sampleAnalysisId}}/start
+
+### Parametre sonuçlarını kaydet
+PUT {{host}}/api/sample-analyses/{{sampleAnalysisId}}/results
+Content-Type: application/json
+
+{
+  "results": [
+    {
+      "analysisParameterId": {{parameterId}},
+      "numericValue": 7.25,
+      "resultNote": "Tekrar ölçümüyle doğrulandı"
+    }
+  ]
+}
+
+### Analizi tamamla
+POST {{host}}/api/sample-analyses/{{sampleAnalysisId}}/complete
+Content-Type: application/json
+
+{
+  "resultNote": "Zorunlu ölçümler tamamlandı"
+}
+
+### Analizi iptal et
+POST {{host}}/api/sample-analyses/{{sampleAnalysisId}}/cancel
+Content-Type: application/json
+
+{
+  "note": "Numune miktarı ölçüm için yetersiz"
+}
+
+### Claim tabanlı numune oluşturma; createdById gönderilmez
+POST {{host}}/api/samples
+Content-Type: application/json
+
+{
+  "sampleCode": "SMP-2026-9001",
+  "sampleType": "Kaya",
+  "locationId": 1,
+  "description": "API örnek numunesi",
+  "initialNote": "Numune sisteme eklendi"
+}
