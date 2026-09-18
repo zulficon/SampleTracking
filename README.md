@@ -1,49 +1,95 @@
 # Numune Analiz Takip
 
-Numunelerin yaşam döngüsünü, analiz sonuçlarını ve kullanıcı yetkilerini takip eden ASP.NET Core uygulaması. Yerel Ollama modelleriyle numune raporu, bilgi tabanı araması (RAG) ve iş yükü özeti üretir.
+Numunelerin kabulden sonuçlandırmaya kadar yaşam döngüsünü, analiz sonuçlarını ve kullanıcı yetkilerini yöneten ASP.NET Core uygulamasıdır. Proje; PostgreSQL ve pgvector üzerinde veri saklar, yerel Ollama modelleriyle bilgi tabanı araması, numune raporu ve iş yükü özeti üretir.
+
+AI çıktıları yalnızca inceleme ve karar desteği içindir. Uygulama otomatik analiz onayı, mevzuat uygunluğu veya akreditasyon kararı üretmez.
 
 ## Özellikler
 
-- Numune oluşturma, çalışan atama, durum takibi ve işlem geçmişi.
-- Analiz kataloğu, parametreler, sonuç girişi ve zorunlu sonuç kontrolü.
-- Cookie tabanlı oturum, rol ve numune sahipliğine göre erişim kontrolü.
-- Kullanıcı/profil yönetimi ve performans görünümü.
-- Yerel AI raporları ve pgvector tabanlı bilgi araması.
+- Numune kaydı, laboratuvar çalışanı atama, durum akışı ve işlem geçmişi
+- Analiz kataloğu, parametre tanımları, ölçüm girişi ve zorunlu sonuç kontrolü
+- Cookie tabanlı oturum ve rol/atama temelli erişim kontrolü
+- Kullanıcı ve profil yönetimi
+- Yönetici performans göstergeleri ve iş yükü özeti
+- Ollama ile yapılandırılmış AI numune raporu
+- pgvector tabanlı bilgi tabanı ve semantik arama
+- Model yanıtları için kaynak doğrulama, karar ifadesi filtreleri ve kural tabanlı özetler
 
-AI çıktıları inceleme desteğidir; analiz onayı veya durum değişikliği yapmaz. Uygulamanın resmî ISO 17025 uygunluk ya da akreditasyon iddiası yoktur.
+## Teknolojiler
+
+| Katman | Teknoloji |
+| --- | --- |
+| Uygulama | .NET 10, ASP.NET Core MVC ve Web API |
+| Veri | PostgreSQL, Entity Framework Core, Npgsql |
+| Vektör arama | pgvector, Pgvector.EntityFrameworkCore |
+| Yerel AI | Ollama, `qwen3:4b-instruct`, `qwen3-embedding:0.6b` |
+| Arayüz | Razor Views, vanilla JavaScript ve CSS |
+| Test | xUnit, WebApplicationFactory, EF Core InMemory |
 
 ## Gereksinimler
 
-- .NET 10 SDK.
-- PostgreSQL ve sunucuya kurulmuş pgvector uzantısı.
-- AI özellikleri için çalışan Ollama ve şu modeller:
+- .NET 10 SDK
+- PostgreSQL ve `vector` uzantısını oluşturabilen bir veritabanı kullanıcısı
+- AI ve bilgi tabanı özellikleri için Ollama
+
+Gerekli Ollama modelleri:
 
 ```shell
 ollama pull qwen3:4b-instruct
 ollama pull qwen3-embedding:0.6b
 ```
 
-Ollama'nın varsayılan adresi `http://localhost:11434/`. Model ayarları `appsettings.json` içindedir; embedding boyutu mevcut veritabanı şemasında 1024'tür. Arayüz Razor, JavaScript ve CSS kullanır; npm kurulumu gerekmez.
+Varsayılan Ollama adresi `http://localhost:11434/` şeklindedir. Model, zaman aşımı, parça boyutu ve arama limiti ayarları [appsettings.json](appsettings.json) içindeki `Ollama` ve `Rag` bölümlerindedir. Embedding boyutu mevcut şemada 1024'tür.
 
-## Yerel kurulum ve ilk giriş
+## Yerel kurulum
 
-1. Depoyu klonlayıp proje klasörünü açın. PostgreSQL'de yerel deneme için boş bir `numune_analiz_db` veritabanı oluşturun. Bağlantı kullanıcısının tablo ve `vector` uzantısını oluşturma yetkisi olmalıdır.
-2. `appsettings.example.json` dosyasını `appsettings.Development.json` adıyla kopyalayın. Mevcut bir geliştirme ayar dosyanız varsa üzerine yazmayın. `ConnectionStrings:SampleDb` değerini kendi veritabanı adı, kullanıcısı ve parolasıyla düzenleyin.
-3. İlk deneme kurulumu için aynı dosyada `SeedData:Enabled` değerini `true` yapın ve `SeedData:DefaultPassword` alanına kendi demo parolanızı yazın. Ollama'yı ve yukarıdaki modelleri hazırlayın.
-4. Proje klasöründe çalıştırın:
+### 1. Veritabanını oluşturun
+
+PostgreSQL'de boş bir geliştirme veritabanı oluşturun. İlk yerel kurulumda seed işlemi migration'ları uygular ve `vector` uzantısını hazırlar; bağlantı kullanıcısının gerekli yetkilere sahip olması gerekir.
+
+```sql
+CREATE DATABASE numune_analiz_db;
+```
+
+### 2. Yerel ayarları tanımlayın
+
+Önerilen yöntem .NET user-secrets kullanmaktır:
+
+```shell
+dotnet user-secrets set "ConnectionStrings:SampleDb" "Host=localhost;Port=5432;Database=numune_analiz_db;Username=postgres;Password=PAROLANIZ"
+dotnet user-secrets set "SeedData:Enabled" "true"
+dotnet user-secrets set "SeedData:DefaultPassword" "GucluBirDemoParolasi123!"
+```
+
+Alternatif olarak [appsettings.example.json](appsettings.example.json) dosyasını `appsettings.Development.json` adıyla kopyalayıp değerleri düzenleyebilirsiniz. Bu dosya Git tarafından yok sayılır. Gerçek parolaları `appsettings.json` içine yazmayın.
+
+`SeedData:Enabled=true` yalnızca Development ortamında çalışır. İlk açılışta migration'ları uygular; 15 demo kullanıcı, analiz kataloğu, 480 numune ve taslak bilgi tabanı belgeleri oluşturur. Bilgi tabanı belgelerinin vektörleştirilmesi için Ollama çalışıyor olmalıdır.
+
+Seed kullanılmayacaksa migration'ları uygulama başlamadan önce ayrıca çalıştırın:
+
+```shell
+dotnet ef database update --project SampleAnalysisTracking.csproj
+```
+
+### 3. Uygulamayı çalıştırın
 
 ```shell
 dotnet restore SampleAnalysisTracking.csproj
 dotnet run --project SampleAnalysisTracking.csproj --launch-profile http
 ```
 
-Development ortamında seed açıkken uygulama migration'ları uygular; `admin` dahil demo kullanıcılarını, analiz kataloğunu ve 480 örnek numuneyi oluşturur. Bilgi tabanı demo belgeleri için yerel embedding modelini kullanır; ilk açılış zaman alabilir.
+Uygulamayı `http://localhost:5011` adresinde açın. Seed açıksa kullanıcı adı `admin`, parola ise `SeedData:DefaultPassword` değeridir. İlk kurulum tamamlandıktan sonra seed ayarını kapatabilirsiniz.
 
-Tarayıcıda `http://localhost:5011` adresini açın. Kullanıcı adı **admin**, parola ise belirlediğiniz `SeedData:DefaultPassword` değeridir. İlk kurulumdan sonra `SeedData:Enabled` değerini `false` yapabilirsiniz. Demo parolası yeni oluşturulan demo hesapları içindir; bu ayarı değiştirmek mevcut hesapların parolasını değiştirmez.
+## Roller ve erişim
 
-Seed işlemini yalnız yerel deneme veritabanında kullanın. Ekrandan yapılan yeni kayıt başvuruları pasif `Field` hesabı oluşturur ve admin tarafından etkinleştirilir.
+| Rol | Mevcut yetkiler |
+| --- | --- |
+| `Admin` | Kullanıcılar, numuneler, analiz kataloğu, bilgi tabanı, AI raporu ve performans işlemleri |
+| `Laboratory` | Kendisine atanmış numuneleri görüntüleme; analiz başlatma, sonuç girme, tamamlama/iptal ve AI raporu |
+| `Manager` | Performans görünümü ve AI iş yükü özeti |
+| `Field` | Kayıt başvurularında kullanılan rol; mevcut API'de numune iş akışı işlemi sunulmuyor |
 
-`appsettings.example.json` otomatik yüklenmez; yalnız şablondur. Gerçek bağlantı ve parolalar `appsettings.Development.json` içinde yerelde kalır ve Git'e alınmaz. `appsettings.json` içine gerçek parola yazmayın.
+Herkese açık kayıt uç noktası pasif bir `Field` hesabı oluşturur. Hesabın kullanılabilmesi için bir yöneticinin hesabı etkinleştirmesi gerekir.
 
 ## Derleme ve test
 
@@ -52,10 +98,57 @@ dotnet build SampleAnalysisTracking.csproj -c Release
 dotnet test SampleAnalysisTracking.IntegrationTests/SampleAnalysisTracking.IntegrationTests.csproj -c Release
 ```
 
-Testler her test için ayrı uygulama/veritabanı kullanır. Gerçek PostgreSQL veya Ollama bağlantısı gerektirmez; EF Core InMemory ve sahte AI istemcileriyle HTTP akışlarını doğrular. PostgreSQL migration'ları ve pgvector benzerlik sorguları bu test kapsamına dahil değildir.
+Entegrasyon testleri uygulamayı `WebApplicationFactory` ile ayağa kaldırır; EF Core InMemory veritabanı ve sahte AI istemcileri kullanır. Kimlik doğrulama, hız sınırlama, rol/atama kontrolleri, analiz yaşam döngüsü, bilgi tabanı kuralları ve AI yanıt güvenliği dahil 14 kritik akışı doğrular.
 
-## Kod ve API
+Bu testler gerçek PostgreSQL migration'larını, pgvector benzerlik sorgularını, gerçek Ollama modellerini ve tarayıcı tabanlı uçtan uca arayüz akışlarını kapsamaz.
 
-Temel akış: `Controller -> Service -> DbContext -> PostgreSQL`. Kaynak kod `Controllers`, `Services`, `Data`, `Models`, `DTOs`, `Clients` ve `Options` klasörlerinde; arayüz `Views` ve `wwwroot` altındadır. `Migrations` veritabanı şemasının kurulum ve değişiklik geçmişidir.
+## Temel API uç noktaları
 
-Development ortamında OpenAPI belgesi `/openapi/v1.json` adresindedir. API istek örnekleri [SampleAnalysisTracking.http](SampleAnalysisTracking.http), AI raporu açıklaması [AI Numune Raporu Modülü](docs/AI_SAMPLE_REPORT_MODULE.md) dosyasındadır.
+Development ortamında OpenAPI belgesi `/openapi/v1.json` adresindedir. Örnek istekler [SampleAnalysisTracking.http](SampleAnalysisTracking.http) dosyasında bulunur.
+
+| Yöntem | Uç nokta | Açıklama |
+| --- | --- | --- |
+| `POST` | `/api/auth/login` | Oturum açar |
+| `POST` | `/api/auth/register` | Pasif Field hesabı oluşturur |
+| `GET` | `/api/auth/me` | Aktif kullanıcıyı döndürür |
+| `GET` | `/api/samples/paged` | Admin numune listesi |
+| `GET` | `/api/samples/mine/paged` | Atanmış laboratuvar numuneleri |
+| `POST` | `/api/samples` | Numune oluşturur |
+| `PATCH` | `/api/samples/{id}/laboratory-worker` | Laboratuvar çalışanı atar |
+| `PATCH` | `/api/samples/{id}/status` | Numune durumunu ilerletir |
+| `POST` | `/api/samples/{id}/analyses` | Numuneye analiz atar |
+| `PUT` | `/api/sample-analyses/{id}/results` | Ölçüm sonuçlarını kaydeder |
+| `POST` | `/api/sample-analyses/{id}/complete` | Analizi tamamlar |
+| `POST` | `/api/samples/{id}/ai-report` | RAG destekli numune raporu üretir |
+| `POST` | `/api/knowledge-base/search` | Semantik bilgi tabanı araması yapar |
+| `GET` | `/api/performance/overview` | Performans göstergelerini döndürür |
+| `POST` | `/api/performance/ai-workload-insight` | İş yükü özeti üretir |
+
+## Proje yapısı
+
+```text
+Controllers/                         HTTP ve yetkilendirme sınırı
+Services/                            İş kuralları ve uygulama servisleri
+Data/                                DbContext, EF yapılandırmaları ve seed
+Models/                              Kalıcı veri modelleri
+DTOs/                                API istek ve yanıt modelleri
+Clients/                             Ollama metin ve embedding istemcileri
+Options/                             Ollama ve RAG ayar modelleri
+Views/ ve wwwroot/                   Razor arayüzü, JavaScript ve CSS
+Migrations/                          PostgreSQL şema geçmişi
+SampleAnalysisTracking.IntegrationTests/  Kritik HTTP akış testleri
+```
+
+Temel bağımlılık akışı `Controller -> Service -> DbContext/AI Client` şeklindedir.
+
+## Belgeler
+
+- [Proje durum ve teknik değerlendirme raporu](docs/PROJE_DURUM_DEGERLENDIRME_RAPORU.docx)
+- [AI numune raporu modülü](docs/AI_SAMPLE_REPORT_MODULE.md)
+
+## Mevcut sınırlar
+
+- Üretim dağıtımı için Docker, CI/CD ve ortam bazlı operasyon kılavuzu bulunmuyor.
+- Gerçek PostgreSQL, pgvector ve Ollama bileşenlerini birlikte doğrulayan test katmanı yok.
+- RAG araması aktif taslak belgeleri de sonuçlara dahil ediyor; üretimde doğrulanmış kaynak politikası ayrıca belirlenmeli.
+- Depoda henüz bir `LICENSE` dosyası bulunmuyor.

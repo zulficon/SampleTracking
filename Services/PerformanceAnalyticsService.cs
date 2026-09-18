@@ -11,22 +11,31 @@ using SampleAnalysisTracking.Options;
 
 namespace SampleAnalysisTracking.Services;
 
+// Laboratuvar çalışanlarının performans metriklerini, analiz tamamlama sürelerini
+// ve iş yükü dağılımını hesaplayan, ayrıca yerel LLM (Ollama) ile operasyonel
+// iş yükü içgörüleri ve darboğaz analizleri üreten servis.
 public sealed class PerformanceAnalyticsService(
     SampleAnalysisTrackingDbContext db,
     IOllamaClient ollamaClient,
     IOptions<OllamaOptions> options,
     ILogger<PerformanceAnalyticsService> logger)
 {
+    // Yapay zeka iş yükü özetinin yalnızca karar destek amaçlı olduğunu belirten yasal uyarı.
     private const string Disclaimer =
         "Bu AI iş yükü özeti karar destek ve inceleme amaçlıdır; personel değerlendirme veya idari yaptırım niteliği taşımaz.";
+
+    // Modelin uygunsuz, rencide edici veya yargılayıcı ifadeler üretmesi durumunda devreye giren güvenlik mesajı.
     private const string FilteredSummary =
         "Model özeti uygunsuz karar veya etiketleme içerdiği için gösterilmedi. İstatistik tablosunu inceleyin.";
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
+    // Personele yönelik olumsuz yargı ve cezalandırıcı ifadeleri engelleyen regex filtresi.
     private static readonly Regex UnsupportedDecisionPattern = new(
         @"\b(yetersiz\p{L}*|başarısız\p{L}*|tembel\p{L}*|cezalandır\p{L}*|incompetent\p{L}*|punish\p{L}*)\b",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
+    // Belirtilen tarih ve rol filtrelerine göre laboratuvar performans genel görünümünü ve KPI metriklerini hesaplar.
     public async Task<PerformanceOverviewResponse> GetPerformanceOverviewAsync(
         PerformanceQuery query,
         long currentUserId,
@@ -222,29 +231,37 @@ public sealed class PerformanceAnalyticsService(
             endDate);
     }
 
+    // Laboratuvar iş yükü verilerini özetleyip yerel LLM (Ollama) üzerinden
+    // operasyonel içgörüler, dengeli iş dağılımı gözlemleri ve yönetim önerileri üretir.
     public async Task<ServiceResult<AiWorkloadInsightResponse>> GenerateAiWorkloadInsightAsync(
         PerformanceQuery query,
         long currentUserId,
         bool isElevated,
         CancellationToken cancellationToken = default)
     {
+        // 1. İlgili dönemin performans verilerini ve KPI metriklerini hesapla
         var overview = await GetPerformanceOverviewAsync(query, currentUserId, isElevated, cancellationToken);
 
         try
         {
+            // 2. İş gücü ve tamamlanan analiz istatistiklerini içeren prompt inşa et
             var prompt = BuildWorkloadPrompt(overview);
+
+            // 3. Ollama modeline istek gönder ve yapılandırılmış JSON çıktısı al
             var rawResponse = await ollamaClient.GenerateWorkloadInsightAsync(prompt, cancellationToken);
 
             var modelResponse = JsonSerializer.Deserialize<AiWorkloadInsightModelResponse>(
                 rawResponse,
                 JsonOptions);
 
+            // Model boş yanıt dönerse güvenli deterministik kural tabanlı yedeğe dön
             if (string.IsNullOrWhiteSpace(modelResponse?.Summary))
             {
                 return ServiceResult<AiWorkloadInsightResponse>.Success(
                     CreateFallbackWorkloadResponse(overview));
             }
 
+            // 4. Model yanıtını filtrele (cezalandırıcı/yargılayıcı dil kontrolü) ve yanıt nesnesini oluştur
             var response = new AiWorkloadInsightResponse(
                 NormalizeSummary(modelResponse.Summary),
                 NormalizeItems(modelResponse.KeyObservations),
@@ -254,12 +271,14 @@ public sealed class PerformanceAnalyticsService(
 
             return ServiceResult<AiWorkloadInsightResponse>.Success(response);
         }
+        // Model çökerse veya geçersiz JSON dönerse sistem durmaz, istatistik tabanlı yedek özet üretir
         catch (OllamaClientException ex)
         {
             logger.LogWarning(ex, "Ollama model failed to generate workload insight.");
             return ServiceResult<AiWorkloadInsightResponse>.Success(
                 CreateFallbackWorkloadResponse(overview));
         }
+        // Ollama sunucusu kapalıysa kullanıcıya bilgilendirici servis hatası iletilir
         catch (HttpRequestException)
         {
             return ServiceResult<AiWorkloadInsightResponse>.Failure(
@@ -273,6 +292,7 @@ public sealed class PerformanceAnalyticsService(
         }
     }
 
+    // Ekip verimliliğini ve analiz dağılımını Ollama LLM modeline JSON olarak sunan prompt üretici.
     private static string BuildWorkloadPrompt(PerformanceOverviewResponse overview)
     {
         var data = new
@@ -320,6 +340,8 @@ public sealed class PerformanceAnalyticsService(
             """;
     }
 
+    // Ollama yanıt vermediğinde veya geçersiz JSON ürettiğinde kullanılan güvenli deterministik uygulama yedeği (Fallback).
+    // Veritabanındaki gerçek istatistiki göstergelerden (KPI) türetilen karar destek metni sunar.
     private AiWorkloadInsightResponse CreateFallbackWorkloadResponse(PerformanceOverviewResponse overview)
     {
         var observations = new List<string>

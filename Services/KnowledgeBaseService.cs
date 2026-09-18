@@ -11,12 +11,16 @@ using SampleAnalysisTracking.Options;
 
 namespace SampleAnalysisTracking.Services;
 
+// RAG (Geri Getirme Destekli Üretim) bilgi tabanı yönetim servisi.
+// Dokümanların metin parçalarına (chunk) ayrılması, embedding modeline gönderilerek
+// vektörleştirilmesi ve PostgreSQL pgvector üzerinde kosinüs benzerlik araması yapılmasını sağlar.
 public sealed class KnowledgeBaseService(
     SampleAnalysisTrackingDbContext db,
     IEmbeddingClient embeddingClient,
     IOptions<RagOptions> ragOptions,
     ILogger<KnowledgeBaseService> logger)
 {
+    // Yeni bir bilgi dokümanını sisteme kaydeder, parçalara ayırır (chunking) ve her parçayı vektörleştirir.
     public async Task<ServiceResult<KnowledgeDocumentItem>> CreateAsync(
         CreateKnowledgeDocumentRequest request,
         long uploadedById,
@@ -31,6 +35,7 @@ public sealed class KnowledgeBaseService(
             ? null
             : request.SourceVersion.Trim();
 
+        // Başlık veya metin boş olamaz
         if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(sourceText))
         {
             return ServiceResult<KnowledgeDocumentItem>.Failure(
@@ -38,6 +43,7 @@ public sealed class KnowledgeBaseService(
                 "Document title and text cannot be blank.");
         }
 
+        // Doğrulanmış kurumsal dokümanlar için resmî kaynak referansı zorunludur
         if (request.SourceStatus == KnowledgeSourceStatus.Verified
             && sourceReference is null)
         {
@@ -46,6 +52,7 @@ public sealed class KnowledgeBaseService(
                 "Verified documents require a source reference.");
         }
 
+        // Dokümanı yükleyen kullanıcının geçerliliğini denetle
         var uploadedByUsername = await db.Users
             .AsNoTracking()
             .Where(user => user.Id == uploadedById && user.IsActive)
@@ -59,6 +66,7 @@ public sealed class KnowledgeBaseService(
                 "The current user cannot add knowledge documents.");
         }
 
+        // 1. Chunking: Uzun metni yapılandırmadaki boyut (örn. 1200 karakter) ve örtüşme (overlap) ayarlarına göre parçalara ayır
         var textChunks = SplitIntoChunks(sourceText);
         if (textChunks.Count == 0)
         {
@@ -67,6 +75,7 @@ public sealed class KnowledgeBaseService(
                 "Document text could not be divided into searchable chunks.");
         }
 
+        // İlgili analiz kodlarını kontrol et ve doğrula
         var analysisCodeIds = request.AnalysisCodeIds.Distinct().ToArray();
         var analysisCodes = analysisCodeIds.Length == 0
             ? []
@@ -81,6 +90,7 @@ public sealed class KnowledgeBaseService(
                 "One or more selected analysis codes do not exist.");
         }
 
+        // 2. Embedding: Ayrıştırılan her bir metin parçasını embedding modeline göndererek sayısal vektörlerini üret
         var chunksResult = await CreateEmbeddedChunksAsync(textChunks, cancellationToken);
         if (!chunksResult.Succeeded)
         {
@@ -91,6 +101,7 @@ public sealed class KnowledgeBaseService(
 
         var chunks = chunksResult.Value!;
 
+        // 3. Doküman ana kaydını oluştur
         var document = new KnowledgeDocument
         {
             Title = title,
@@ -103,11 +114,13 @@ public sealed class KnowledgeBaseService(
             CreatedAt = DateTimeOffset.UtcNow
         };
 
+        // 4. Vektörleştirilmiş parçacıkları (chunks) dokümana ekle
         foreach (var chunk in chunks)
         {
             document.Chunks.Add(chunk);
         }
 
+        // 5. Dokümanı ilgili analiz kodlarına bağla
         foreach (var analysisCode in analysisCodes)
         {
             document.AnalysisCodeLinks.Add(new KnowledgeDocumentAnalysisCode
@@ -116,6 +129,7 @@ public sealed class KnowledgeBaseService(
             });
         }
 
+        // 6. Dokümanı ve vektörleri veritabanına kaydet (pgvector tablosuna yazılır)
         db.KnowledgeDocuments.Add(document);
         await db.SaveChangesAsync(cancellationToken);
 
@@ -133,6 +147,7 @@ public sealed class KnowledgeBaseService(
                 uploadedByUsername));
     }
 
+    // Bilgi tabanındaki tüm dokümanları parça sayıları ile birlikte listeler
     public async Task<IReadOnlyList<KnowledgeDocumentItem>> GetAllAsync(
         CancellationToken cancellationToken) =>
         await db.KnowledgeDocuments
@@ -151,6 +166,7 @@ public sealed class KnowledgeBaseService(
                 document.UploadedBy.Username))
             .ToListAsync(cancellationToken);
 
+    // Belirtilen kimlikteki bilgi dokümanının tüm detaylarını getirir
     public async Task<ServiceResult<KnowledgeDocumentDetail>> GetByIdAsync(
         long id,
         CancellationToken cancellationToken)
@@ -186,6 +202,7 @@ public sealed class KnowledgeBaseService(
             : ServiceResult<KnowledgeDocumentDetail>.Success(detail);
     }
 
+    // Taslak durumdaki bir bilgi dokümanını günceller, eski parçalarını siler ve yeni metin için vektörleri baştan üretir
     public async Task<ServiceResult<KnowledgeDocumentDetail>> UpdateDraftAsync(
         long id,
         UpdateKnowledgeDocumentRequest request,
@@ -203,6 +220,7 @@ public sealed class KnowledgeBaseService(
                 "Knowledge document was not found.");
         }
 
+        // Sadece taslak (Draft) belgelerin içeriği ve vektörleri değiştirilebilir
         if (document.SourceStatus != KnowledgeSourceStatus.Draft)
         {
             return ServiceResult<KnowledgeDocumentDetail>.Failure(
@@ -240,6 +258,7 @@ public sealed class KnowledgeBaseService(
                 "One or more selected analysis codes do not exist.");
         }
 
+        // Yeni metni parçalara (chunks) ayır
         var textChunks = SplitIntoChunks(sourceText);
         if (textChunks.Count == 0)
         {
@@ -248,6 +267,7 @@ public sealed class KnowledgeBaseService(
                 "Document text could not be divided into searchable chunks.");
         }
 
+        // Yeni metin parçaları için embedding vektörlerini baştan oluştur
         var chunksResult = await CreateEmbeddedChunksAsync(textChunks, cancellationToken);
         if (!chunksResult.Succeeded)
         {
@@ -266,10 +286,12 @@ public sealed class KnowledgeBaseService(
         document.SourceVersion = sourceVersion;
         document.SourceText = sourceText;
 
+        // Eski chunk'ları ve analiz bağlantılarını temizle
         db.KnowledgeChunks.RemoveRange(document.Chunks);
         db.KnowledgeDocumentAnalysisCodes.RemoveRange(document.AnalysisCodeLinks);
         await db.SaveChangesAsync(cancellationToken);
 
+        // Yeni üretilen vektörlü parçaları ekle
         foreach (var chunk in chunksResult.Value!)
         {
             chunk.KnowledgeDocumentId = document.Id;
@@ -294,21 +316,28 @@ public sealed class KnowledgeBaseService(
         return await GetByIdAsync(document.Id, cancellationToken);
     }
 
+    // Arama isteği nesnesi ile serbest metin araması yapar
     public async Task<ServiceResult<IReadOnlyList<KnowledgeSearchItem>>> SearchAsync(
         SearchKnowledgeRequest request,
         CancellationToken cancellationToken) =>
         await SearchAsync(request.Query, cancellationToken);
 
+    // Yalnızca arama metni ile bilgi tabanında semantik vektör araması yapar
     public async Task<ServiceResult<IReadOnlyList<KnowledgeSearchItem>>> SearchAsync(
         string query,
         CancellationToken cancellationToken)
         => await SearchAsync(query, [], cancellationToken);
 
+    // RAG Semantik Arama Motoru:
+    // 1. Arama sorgusunu embedding modeline ileterek anlamsal vektöre dönüştürür.
+    // 2. PostgreSQL pgvector eklentisinin CosineDistance fonksiyonu ile parçaların kosinüs benzerliğini hesaplar.
+    // 3. Analiz kodu eşleşmesine ve benzerlik skoruna göre adayları sıralar ve en alakalı dokümanları döndürür.
     public async Task<ServiceResult<IReadOnlyList<KnowledgeSearchItem>>> SearchAsync(
         string query,
         IReadOnlyCollection<long> preferredAnalysisCodeIds,
         CancellationToken cancellationToken)
     {
+        // Arama metni boş olamaz
         if (string.IsNullOrWhiteSpace(query))
         {
             return ServiceResult<IReadOnlyList<KnowledgeSearchItem>>.Failure(
@@ -316,6 +345,7 @@ public sealed class KnowledgeBaseService(
                 "Search text cannot be blank.");
         }
 
+        // Bilgi tabanında aranabilir aktif doküman olup olmadığını kontrol et
         var hasSearchableKnowledge = await db.KnowledgeChunks
             .AsNoTracking()
             .AnyAsync(chunk => chunk.KnowledgeDocument.IsActive, cancellationToken);
@@ -327,6 +357,7 @@ public sealed class KnowledgeBaseService(
 
         var requestedAnalysisCodeIds = preferredAnalysisCodeIds.Distinct().ToArray();
 
+        // Arama sorgusunun anlamsal temsilini taşıyan embedding vektörünü oluştur
         Vector queryEmbedding;
         try
         {
@@ -356,7 +387,11 @@ public sealed class KnowledgeBaseService(
                 "The local embedding model timed out.");
         }
 
+        // Vektör uzayında taranacak aday parça sayısı sınırı
         var candidateLimit = Math.Max(ragOptions.Value.SearchResultLimit * 8, 24);
+
+        // pgvector Vektör Benzerliği Sorgusu:
+        // Cosine Similarity = 1 - Cosine Distance formülü ile 0.0 (en uzak) ile 1.0 (tam eşleşme) arası benzerlik hesaplanır.
         var candidates = await db.KnowledgeChunks
             .AsNoTracking()
             .Where(chunk => chunk.KnowledgeDocument.IsActive)
@@ -369,19 +404,25 @@ public sealed class KnowledgeBaseService(
                 SourceReference = chunk.KnowledgeDocument.SourceReference,
                 chunk.ChunkIndex,
                 chunk.Content,
+                // Kosinüs benzerliği: 1 - CosineDistance(v1, v2)
                 Similarity = 1 - chunk.Embedding.CosineDistance(queryEmbedding),
+                // Numunenin analiz kodları ile bu dokümanın doğrudan etiketlenip etiketlenmediği
                 IsAnalysisCodeMatch = requestedAnalysisCodeIds.Length > 0
                     && chunk.KnowledgeDocument.AnalysisCodeLinks.Any(link =>
                         requestedAnalysisCodeIds.Contains(link.AnalysisCodeId))
             })
+            // Öncelik 1: İlgili analiz koduna bağlı dokümanlar
             .OrderByDescending(candidate => candidate.IsAnalysisCodeMatch)
+            // Öncelik 2: En yüksek kosinüs benzerliği
             .ThenByDescending(candidate => candidate.Similarity)
             .Take(candidateLimit)
             .ToListAsync(cancellationToken);
 
+        // Aynı dokümandan birden fazla parça gelirse en yüksek benzerliğe sahip tek bir parçayı seç (Distinct doküman)
         var matches = candidates
             .GroupBy(candidate => candidate.KnowledgeDocumentId)
             .Select(group => group.First())
+            // Yapılandırmadaki sonuç limiti kadar al (örn. en iyi 4 doküman)
             .Take(ragOptions.Value.SearchResultLimit)
             .Select(candidate => new KnowledgeSearchItem(
                 candidate.KnowledgeDocumentId,
@@ -398,6 +439,9 @@ public sealed class KnowledgeBaseService(
         return ServiceResult<IReadOnlyList<KnowledgeSearchItem>>.Success(matches);
     }
 
+    // Metin Parçalama Algoritması (Sliding Window Chunking):
+    // Uzun dokümanları LLM ve embedding modellerinin bağlam sınırlarına uygun boyutlara böler.
+    // Cümle ve kelime bütünlüğünü korumak için son boşluk karakterini bulur ve parçalar arasında örtüşme (overlap) bırakır.
     private IReadOnlyList<string> SplitIntoChunks(string text)
     {
         var settings = ragOptions.Value;
@@ -409,9 +453,11 @@ public sealed class KnowledgeBaseService(
             var length = Math.Min(settings.ChunkSizeCharacters, text.Length - start);
             var end = start + length;
 
+            // Metin sonuna ulaşılmadıysa kelimenin ortasından bölmemek için son boşluk/satır başı karakterini ara
             if (end < text.Length)
             {
                 var lastSpace = text.LastIndexOfAny([' ', '\n', '\r', '\t'], end - 1, length);
+                // Eğer boşluk karakteri parça ortasından sonraysa kesme noktasını o boşluğa çek
                 if (lastSpace > start + (settings.ChunkSizeCharacters / 2))
                 {
                     end = lastSpace + 1;
@@ -429,12 +475,14 @@ public sealed class KnowledgeBaseService(
                 break;
             }
 
+            // Bir sonraki parçanın başlangıcı: Anlamsal süreklilik için örtüşme miktarı (overlap) kadar geriden başla
             start = Math.Max(start + 1, end - settings.ChunkOverlapCharacters);
         }
 
         return chunks;
     }
 
+    // Her bir metin parçası için Ollama embedding istemcisini çağırarak pgvector Vector nesnelerini üretir
     private async Task<ServiceResult<List<KnowledgeChunk>>> CreateEmbeddedChunksAsync(
         IReadOnlyList<string> textChunks,
         CancellationToken cancellationToken)
@@ -445,10 +493,12 @@ public sealed class KnowledgeBaseService(
         {
             for (var index = 0; index < textChunks.Count; index++)
             {
+                // Embedding modeline metin parçasını ilet ve float[] vektörünü al
                 var embedding = await embeddingClient.CreateEmbeddingAsync(
                     textChunks[index],
                     cancellationToken);
 
+                // pgvector'ın Vector tipiyle eşleştirip listeye ekle
                 chunks.Add(new KnowledgeChunk
                 {
                     ChunkIndex = index,
@@ -482,3 +532,4 @@ public sealed class KnowledgeBaseService(
         }
     }
 }
+

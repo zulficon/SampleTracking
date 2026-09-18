@@ -62,6 +62,7 @@ if (string.IsNullOrWhiteSpace(connectionString))
         "Host=localhost;Database=integration_tests;Username=test;Password=test";
 }
 
+// PostgreSQL ve pgvector eklentisi desteği ile DbContext kaydı (Vektör benzerlik sorguları için gereklidir).
 builder.Services.AddDbContext<SampleAnalysisTrackingDbContext>(options =>
     options.UseNpgsql(connectionString, npgsqlOptions => npgsqlOptions.UseVector()));
 
@@ -71,9 +72,11 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<LocationService>();
 builder.Services.AddScoped<AnalysisCatalogService>();
 builder.Services.AddScoped<SampleAnalysisService>();
+// RAG (Bilgi Tabanı) yönetim ve kosinüs arama servisi
 builder.Services.AddScoped<KnowledgeBaseService>();
 builder.Services.AddScoped<IPasswordHasher<AppUser>, PasswordHasher<AppUser>>();
 
+// Yerel LLM (Ollama) konfigürasyon seçeneklerinin bağlanması ve çalışma zamanı doğrulaması
 builder.Services
     .AddOptions<OllamaOptions>()
     .BindConfiguration(OllamaOptions.SectionName)
@@ -86,6 +89,7 @@ builder.Services
                    && !string.IsNullOrWhiteSpace(options.KeepAlive),
         "Ollama configuration is invalid.");
 
+// RAG (Embedding modeli, vektör boyutu, parça boyutu ve örtüşme) ayarlarının bağlanması ve doğrulanması
 builder.Services
     .AddOptions<RagOptions>()
     .BindConfiguration(RagOptions.SectionName)
@@ -98,6 +102,7 @@ builder.Services
                    && options.SearchResultLimit is >= 1 and <= 10,
         "RAG configuration is invalid.");
 
+// Yerel LLM metin üretimi için Ollama REST API istemcisinin HttpClient ile kaydedilmesi
 builder.Services.AddHttpClient<IOllamaClient, OllamaClient>((serviceProvider, client) =>
 {
     var options = serviceProvider
@@ -107,6 +112,8 @@ builder.Services.AddHttpClient<IOllamaClient, OllamaClient>((serviceProvider, cl
     client.BaseAddress = new Uri(options.BaseUrl, UriKind.Absolute);
     client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
 });
+
+// Doküman parçacıklarını vektörleştiren Ollama Embedding istemcisinin HttpClient ile kaydedilmesi
 builder.Services.AddHttpClient<IEmbeddingClient, OllamaEmbeddingClient>((serviceProvider, client) =>
 {
     var options = serviceProvider
@@ -116,8 +123,11 @@ builder.Services.AddHttpClient<IEmbeddingClient, OllamaEmbeddingClient>((service
     client.BaseAddress = new Uri(options.BaseUrl, UriKind.Absolute);
     client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
 });
+
+// Numune analiz kayıtlarını ve RAG kaynaklarını harmanlayan AI numune raporlama servisi
 builder.Services.AddScoped<AiSampleReportService>();
 builder.Services.AddScoped<PerformanceAnalyticsService>();
+
 
 builder.Services
     .AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)

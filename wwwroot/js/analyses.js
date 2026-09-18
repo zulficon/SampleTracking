@@ -365,9 +365,11 @@
         setMessage(aiSampleReportMessage, '');
     }
 
+    // Yapay zeka tarafından üretilen numune raporunu (cümleler, atıflar, dikkat noktaları ve RAG kaynakları) DOM üzerinde render eder.
     function renderAiSampleReport(report) {
         aiSampleReportContent.replaceChildren();
 
+        // 1. Genel Özet Bölümü: Modelin ürettiği her bir cümleyi ve kaynak atıflarını (örn. [Kayıt], [1]) listeler.
         const summary = document.createElement('section');
         summary.className = 'ai-insight-summary';
         const heading = document.createElement('h4');
@@ -378,15 +380,18 @@
             ? report.summarySentences
             : [{ text: report.summary, usesRecordData: true, sourceNumbers: [] }];
 
+        // Her bir cümle ve atıf rozetleri DOM'a eklenir
         summarySentences.forEach(sentence => {
             if (!sentence?.text) return;
 
             const text = document.createElement('p');
             text.textContent = sentence.text;
 
+            // Cümlenin atıf yaptığı kaynak numaraları
             const sourceNumbers = Array.isArray(sentence.sourceNumbers)
                 ? sentence.sourceNumbers.filter(number => Number.isInteger(number) && number > 0)
                 : [];
+            // Kayıt verisi kullanıldıysa "[Kayıt]", bilgi tabanı kullanıldıysa kaynak numaraları rozet olarak eklenir
             const labels = [
                 ...(sentence.usesRecordData ? ['Kayıt'] : []),
                 ...sourceNumbers
@@ -404,6 +409,7 @@
 
         summary.append(heading, sentences);
 
+        // 2. Uygulama Listeleri: Tamamlanan, bekleyen, dikkat çeken ve eksik analizler
         const lists = document.createElement('div');
         lists.className = 'ai-insight-lists';
         appendInsightList(lists, 'Tamamlanan analizler', report.completedAnalyses, 'Tamamlanan analiz bulunmuyor.');
@@ -411,6 +417,7 @@
         appendInsightList(lists, 'Dikkat noktaları', report.attentionPoints, 'Ek dikkat noktası bulunmuyor.');
         appendInsightList(lists, 'Eksik zorunlu sonuçlar', report.missingRequiredResults, 'Eksik zorunlu sonuç bulunmuyor.');
 
+        // 3. RAG Bilgi Kaynakları Bölümü: Modele bağlam (context) olarak verilen iç kılavuz ve prosedürler
         const sources = document.createElement('section');
         sources.className = 'ai-report-sources';
         const sourceHeading = document.createElement('h4');
@@ -419,6 +426,7 @@
         sourceHint.textContent = 'Numaralar, yalnız bu raporda modele verilen RAG bağlamını gösterir; resmî teknik karar veya kanıt değildir.';
         sources.append(sourceHeading, sourceHint);
 
+        // Kullanılan bilgi kaynakları varsa detaylarını (başlık, benzerlik skoru, alıntı) listele
         if (report.knowledgeSources?.length) {
             const sourceList = document.createElement('ul');
             report.knowledgeSources.forEach(source => {
@@ -448,10 +456,12 @@
             sources.appendChild(empty);
         }
 
+        // 4. Yasal Uyarı / Sorumluluk Reddi (Disclaimer)
         const disclaimer = document.createElement('p');
         disclaimer.className = 'ai-insight-disclaimer';
         disclaimer.textContent = report.disclaimer;
 
+        // 5. Raporu Üreten Yapay Zeka Model Bilgisi
         const model = document.createElement('small');
         model.className = 'ai-insight-model';
         model.textContent = `Yerel model: ${report.model}`;
@@ -460,13 +470,16 @@
         aiSampleReportContent.hidden = false;
     }
 
+    // Seçili numune için sunucudaki AI raporlama uç noktasına (/api/samples/{id}/ai-report) istek gönderir.
     async function generateAiSampleReport() {
         if (!currentSample) return;
 
+        // Buton durumunu meşgule al ve bilgilendirme mesajı göster
         workspace.setButtonBusy(generateAiSampleReportButton, true, 'Rapor hazırlanıyor...');
         setMessage(aiSampleReportMessage, 'Yerel AI modeli numunenin analiz kayıtlarını inceliyor...');
 
         try {
+            // Yapay zeka raporunu üreten POST API çağrısı
             const response = await fetch(`/api/samples/${currentSample.id}/ai-report`, {
                 method: 'POST'
             });
@@ -482,6 +495,7 @@
                 return;
             }
 
+            // Gelen JSON yanıtı arayüzde çizdir
             renderAiSampleReport(await response.json());
             setMessage(aiSampleReportMessage, 'AI numune raporu hazır.', true);
         } catch {

@@ -6,11 +6,16 @@ using Microsoft.Extensions.Options;
 
 namespace SampleAnalysisTracking.Clients;
 
+// Ollama yerel yapay zeka sunucusu ile REST API üzerinden iletişim kuran ana LLM istemcisi.
+// Yapılandırılmış JSON şemaları (Structured Outputs), sistem yönergeleri (System Prompts)
+// ve hiperparametre denetimi (temperature, context window vb.) uygular.
 public sealed class OllamaClient(
     HttpClient httpClient,
     IOptions<OllamaOptions> options,
     ILogger<OllamaClient> logger) : IOllamaClient
 {
+    // Numune analiz raporu için yerel LLM modeline çağrı yapar.
+    // summarySentences, text, usesRecordData ve sourceNumbers alanlarını zorunlu kılan katı JSON şeması ile çalışır.
     public async Task<string> GenerateSampleReportAsync(
         string prompt,
         CancellationToken cancellationToken)
@@ -20,6 +25,8 @@ public sealed class OllamaClient(
             "Return exactly one JSON object with summarySentences. Every item must have text, usesRecordData, and sourceNumbers. Do not return any other fields.",
             cancellationToken);
 
+    // Laboratuvar iş yükü ve performans içgörüsü için yerel LLM modeline çağrı yapar.
+    // summary, keyObservations ve recommendations alanlarını içeren JSON şeması ile çalışır.
     public async Task<string> GenerateWorkloadInsightAsync(
         string prompt,
         CancellationToken cancellationToken)
@@ -29,17 +36,22 @@ public sealed class OllamaClient(
             "Return exactly one JSON object with these fields: summary, keyObservations, recommendations. keyObservations and recommendations must be JSON string arrays.",
             cancellationToken);
 
+    // Belirtilen JSON şeması ve sistem prompt'u ile Ollama /api/chat uç noktasına istek gönderen merkezi metot.
     private async Task<string> GenerateAsync(
         string prompt,
         object responseFormat,
         string responseSchema,
         CancellationToken cancellationToken)
     {
+        // Ollama API'sine gönderilecek sohbet (chat) oturumu ve hiperparametre nesnesi.
         var request = new
         {
+            // Kullanılacak LLM modeli (örn. qwen3:4b-instruct)
             model = options.Value.Model,
+            // Modele aktarılan mesaj listesi (Sistem Rolü + Kullanıcı Rolü)
             messages = new[]
             {
+                // Sistem prompt'u: Modelin rolünü, dilini (Türkçe), sınırlarını ve halüsinasyon koruma kurallarını belirler.
                 new
                 {
                     role = "system",
@@ -57,26 +69,38 @@ public sealed class OllamaClient(
                     + Environment.NewLine
                     + responseSchema
                 },
+                // Kullanıcı girdisi: Numune analiz verileri ve RAG ile getirilmiş bilgi kaynakları
                 new { role = "user", content = prompt }
             },
+            // Yanıtın parça parça (streaming) değil, tek seferde tamamlanmasını sağlar.
             stream = false,
+            // Düşünce (reasoning tokens) zincirinin çıktıya dahil edilmesini kapatır.
             think = false,
+            // Modelin yalnızca belirtilen JSON şemasına uygun çıktı üretmesini zorunlu kılar (Grammar / Constrained Decoding).
             format = responseFormat,
+            // Modelin RAM/VRAM'de sıcak tutulma süresi
             keep_alive = options.Value.KeepAlive,
+            // Model çalıştırma hiperparametreleri
             options = new
             {
+                // Düşük sıcaklık (örn. 0.35): Halüsinasyonu azaltır, deterministik ve verilere sadık yanıtlar üretir.
                 temperature = options.Value.Temperature,
+                // Top-p (nucleus sampling): Olasılık dağılımının en olası yüzdesini sınırlandırır.
                 top_p = options.Value.TopP,
+                // Modelin hafızasında tutabileceği maksimum girdi+çıktı token sayısı (bağlam penceresi).
                 num_ctx = options.Value.ContextWindow,
+                // Modelin üretebileceği maksimum yanıt token sayısı.
                 num_predict = options.Value.MaxOutputTokens
             }
         };
 
+        // Ollama /api/chat uç noktasına HTTP POST isteği gönderilir.
         using var response = await httpClient.PostAsJsonAsync(
             "api/chat",
             request,
             cancellationToken);
 
+        // Ollama HTTP hatası verirse (servis hatası veya model yüklenememe), hata içeriği okunarak özel exception fırlatılır.
         if (!response.IsSuccessStatusCode)
         {
             var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -94,15 +118,18 @@ public sealed class OllamaClient(
 
         try
         {
+            // Ollama sohbet yanıtı JSON olarak çözümlenir.
             var payload = await response.Content.ReadFromJsonAsync<OllamaChatResponse>(
                 cancellationToken);
 
+            // Model yanıtı boş döndüyse hata üretilir.
             if (string.IsNullOrWhiteSpace(payload?.Message?.Content))
             {
                 logger.LogWarning("Ollama returned an empty analysis insight response.");
                 throw new OllamaClientException("Ollama returned an empty response.");
             }
 
+            // Modelin bitiş nedeni kontrol edilir (beklenen "stop" tur; token limiti veya bağlam dolması uyarılabilir).
             if (!string.IsNullOrWhiteSpace(payload.DoneReason)
                 && !string.Equals(payload.DoneReason, "stop", StringComparison.OrdinalIgnoreCase))
             {
@@ -111,6 +138,7 @@ public sealed class OllamaClient(
                     payload.DoneReason);
             }
 
+            // Dönen metin içerisindeki JSON nesnesi ayıklanır (markdown veya ek boşluk temizliği).
             return ExtractJsonObject(payload.Message.Content);
         }
         catch (JsonException exception)
@@ -124,14 +152,19 @@ public sealed class OllamaClient(
         }
     }
 
+    // Ollama API'sinin sohbet yanıt şeması.
     private sealed record OllamaChatResponse(
         OllamaChatMessage? Message,
         [property: JsonPropertyName("done_reason")] string? DoneReason);
+    // Sohbet mesajının içeriği.
     private sealed record OllamaChatMessage(string? Content);
 
+    // Genel içgörü şablonu oluşturan yardımcı metot.
     private static object CreateResponseSchema(params string[] arrayProperties) =>
         CreateResponseSchema(550, arrayProperties);
 
+    // Numune raporu çıktısının JSON Schema kurallarını belirler.
+    // Her cümlenin text, usesRecordData (veritabanı verisi kullanıldı mı) ve sourceNumbers (RAG kaynakları) içermesini zorunlu kılar.
     private static object CreateSampleReportResponseSchema() => new
     {
         type = "object",
@@ -165,6 +198,7 @@ public sealed class OllamaClient(
         additionalProperties = false
     };
 
+    // Dinamik dizi özellikleri alan JSON şeması oluşturur (iş yükü içgörüleri vb. için).
     private static object CreateResponseSchema(
         int summaryMaximumLength,
         params string[] arrayProperties)
@@ -193,6 +227,7 @@ public sealed class OllamaClient(
         };
     }
 
+    // Model yanıtındaki ilk '{' ve son '}' karakterlerini bularak saf JSON bloğunu izole eder.
     private static string ExtractJsonObject(string content)
     {
         var firstBrace = content.IndexOf('{');
@@ -204,6 +239,7 @@ public sealed class OllamaClient(
     }
 }
 
+// Ollama API hataları veya geçersiz model çıktıları için özel istisna sınıfı.
 public sealed class OllamaClientException : Exception
 {
     public OllamaClientException(string message) : base(message)

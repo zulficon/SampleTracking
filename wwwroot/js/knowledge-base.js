@@ -240,9 +240,11 @@
         renderDocuments(await response.json());
     }
 
+    // RAG kosinüs benzerliği arama sonuçlarını (doküman adı, chunk sırası, benzerlik skoru ve içerik) listeler.
     function renderSearchResults(results) {
         searchResults.replaceChildren();
 
+        // Eşleşen aktif parça bulunamazsa bilgilendirme mesajı göster
         if (!results.length) {
             const empty = document.createElement('p');
             empty.textContent = 'Eşleşen aktif RAG kaynağı bulunamadı.';
@@ -250,12 +252,14 @@
             return;
         }
 
+        // Gelen her bir semantik eşleşme kartını oluştur
         results.forEach(result => {
             const item = document.createElement('article');
             item.className = 'knowledge-search-item';
             const title = document.createElement('strong');
             title.textContent = result.documentTitle + ' · chunk ' + (result.chunkIndex + 1);
             const meta = document.createElement('small');
+            // pgvector kosinüs benzerlik puanı (3 basamaklı hassasiyetle)
             const score = result.similarity === null || result.similarity === undefined
                 ? 'benzerlik hesaplanmadı'
                 : 'benzerlik ' + Number(result.similarity).toFixed(3);
@@ -285,6 +289,8 @@
         await loadAll();
     });
 
+    // Yeni Bilgi Tabanı Dokümanı Ekleme Formu:
+    // Metin sunucuya gönderilir, sunucu metni parçalar ve embedding modeli ile vektörleştirerek veritabanına kaydeder.
     form.addEventListener('submit', async event => {
         event.preventDefault();
         const values = new FormData(form);
@@ -309,10 +315,12 @@
             analysisCodeIds
         };
 
+        // Kullanıcıya dokümanın parçalanıp embedding modeliyle vektörleştirildiği bilgisini ver
         setButtonBusy(submitButton, true, 'Vektörleniyor...');
         setMessage('Belge parçalanıyor ve embedding modeli ile vektörleniyor...');
 
         try {
+            // POST /api/knowledge-base/documents çağrısı ile RAG kayıt ve vektörleştirme başlatılır
             const response = await fetch('/api/knowledge-base/documents', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -335,6 +343,8 @@
         }
     });
 
+    // Taslak Dokümanı Güncelleme Formu:
+    // Değişen metin sunucuya iletilir; eski parçalar silinir ve yeni metin parçalanarak yeniden vektörleştirilir.
     detailForm.addEventListener('submit', async event => {
         event.preventDefault();
         if (selectedDocumentId === null) return;
@@ -355,6 +365,7 @@
         setDetailMessage('Belge güncelleniyor ve embedding vektörleri yeniden oluşturuluyor...');
 
         try {
+            // PUT /api/knowledge-base/documents/{id} çağrısı ile doküman ve vektörleri güncellenir
             const response = await fetch('/api/knowledge-base/documents/' + selectedDocumentId, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
@@ -379,6 +390,8 @@
         }
     });
 
+    // RAG Semantik Arama Formu:
+    // Kullanıcının yazdığı serbest arama metni sunucuya iletilir, embedding modeli ve pgvector ile en benzer dokümanlar aranır.
     searchForm.addEventListener('submit', async event => {
         event.preventDefault();
         const query = String(new FormData(searchForm).get('query') || '').trim();
@@ -386,6 +399,7 @@
 
         setButtonBusy(searchButton, true, 'Aranıyor...');
         try {
+            // POST /api/knowledge-base/search çağrısı ile vektörel arama yapılır
             const response = await fetch('/api/knowledge-base/search', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -397,6 +411,7 @@
                 return;
             }
 
+            // Gelen kosinüs benzerliği eşleşmelerini ekranda listele
             renderSearchResults(await response.json());
         } catch {
             setMessage('RAG araması yapılırken sunucuya ulaşılamadı.');
@@ -404,6 +419,7 @@
             setButtonBusy(searchButton, false);
         }
     });
+
 
     updateSourceReferenceRequirement();
 
